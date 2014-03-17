@@ -1,4 +1,4 @@
-#include "Constants.h"
+#include "constants.h"
 #include "gas_disk.h"
 #include "options.h"
 #include "nbody_exception.h"

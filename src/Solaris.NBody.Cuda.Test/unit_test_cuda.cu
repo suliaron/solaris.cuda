@@ -15,7 +15,7 @@
 #include <thrust/transform.h>
 
 #include "config.h"
-#include "Constants.h" 
+#include "constants.h" 
 #include "gas_disk.h"
 #include "nbody.h"
 #include "nbody_exception.h"

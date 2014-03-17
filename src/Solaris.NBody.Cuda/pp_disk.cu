@@ -7,15 +7,15 @@
 #include "device_launch_parameters.h"
 
 // includes Thrust
-#include "thrust\device_vector.h"
-#include "thrust\host_vector.h"
-#include "thrust\generate.h"
-#include "thrust\copy.h"
-#include "thrust\transform.h"
+#include "thrust/device_vector.h"
+#include "thrust/host_vector.h"
+#include "thrust/generate.h"
+#include "thrust/copy.h"
+#include "thrust/transform.h"
 
 // includes project
 #include "config.h"
-#include "Constants.h"
+#include "constants.h"
 #include "gas_disk.h"
 #include "nbody_exception.h"
 #include "number_of_bodies.h"

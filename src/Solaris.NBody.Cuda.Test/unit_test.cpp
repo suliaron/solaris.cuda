@@ -14,7 +14,7 @@
 
 //#include "config.h"
 //#include "planets.h"
-#include "Constants.h"
+#include "constants.h"
 #include "gas_disk.h"
 
 

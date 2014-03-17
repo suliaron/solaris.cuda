@@ -8,7 +8,7 @@
 #include <string>
 #include <sstream>
 
-#include "Constants.h"
+#include "constants.h"
 #include "number_of_bodies.h"
 
 #define MASS_STAR		1.0			// M_sol
