@@ -10,7 +10,7 @@ gas_disk::gas_disk()
 	eta.x = eta.y = 0.0;
 	tau.x = tau.y = 0.0;
 
-	gas_decrease = CONSTANT;
+	gas_decrease = GAS_DECREASE_CONSTANT;
 	t0 = t1 = timeScale = 0.0;
 }
 
@@ -30,10 +30,10 @@ var_t	gas_disk::reduction_factor(ttt_t t)
 {
 	switch (gas_decrease) 
 	{
-	case CONSTANT:
+	case GAS_DECREASE_CONSTANT:
 		return 1.0;
 		break;
-	case LINEAR:
+	case GAS_DECREASE_LINEAR:
 		if (t <= t0) {
 			return 1.0;
 		}
@@ -44,7 +44,7 @@ var_t	gas_disk::reduction_factor(ttt_t t)
 			return 0.0;
 		}
 		break;
-	case EXPONENTIAL:
+	case GAS_DECREASE_EXPONENTIAL:
 		return exp(-t/timeScale);
 		break;
 	default:
