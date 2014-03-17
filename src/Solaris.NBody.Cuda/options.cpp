@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "constants.h"
 #include "gas_disk.h"
 #include "options.h"
@@ -108,7 +110,7 @@ void options::parse_options(int argc, const char** argv)
 			ttt_t	t0 = 0.0;
 			ttt_t	t1 = 100.0 * Constants::YearToDay;
 			ttt_t	timeScale = 10.0 * Constants::YearToDay;
-			gas_disk::gas_decrease_t gasDecrease = gas_disk::gas_decrease_t::CONSTANT;
+			gas_decrease_t gasDecrease = GAS_DECREASE_CONSTANT;
 			gasDisk = new gas_disk(rho, sch, eta, tau, gasDecrease, t0, t1, timeScale);
 		}
 		// Integrator type

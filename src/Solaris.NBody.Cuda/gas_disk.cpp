@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "gas_disk.h"
 
 gas_disk::gas_disk() 

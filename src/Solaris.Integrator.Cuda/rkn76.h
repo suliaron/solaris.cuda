@@ -24,7 +24,7 @@ private:
 	var_t	tolerance;
 
 	//! Holds the derivatives for the differential equations
-	std::vector<std::vector<d_var_t>>	d_k;
+	std::vector< std::vector<d_var_t> >	d_k;
 	//! Holds the temporary solution approximation along the step
 	std::vector<d_var_t>				d_ytemp;
 	//! Holds the leading local truncation error for each variable

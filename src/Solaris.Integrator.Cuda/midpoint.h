@@ -16,7 +16,7 @@ private:
 	bool	adaptive;
 	var_t	tolerance;
 
-	std::vector<std::vector<d_var_t>>	d_k;
+	std::vector< std::vector<d_var_t> >	d_k;
 	std::vector<d_var_t>				d_ytemp;
 
 	dim3	grid;

@@ -389,9 +389,9 @@ var_t	reduction_factor(const gas_disk* gasDisk, ttt_t t)
 {
 	switch (gasDisk->gas_decrease) 
 	{
-	case gas_disk::CONSTANT:
+	case GAS_DECREASE_CONSTANT:
 		return 1.0;
-	case gas_disk::LINEAR:
+	case GAS_DECREASE_LINEAR:
 		if (t <= gasDisk->t0) {
 			return 1.0;
 		}
@@ -401,7 +401,7 @@ var_t	reduction_factor(const gas_disk* gasDisk, ttt_t t)
 		else {
 			return 0.0;
 		}
-	case gas_disk::EXPONENTIAL:
+	case GAS_DECREASE_EXPONENTIAL:
 		return exp(-t/gasDisk->timeScale);
 	default:
 		return 1.0;

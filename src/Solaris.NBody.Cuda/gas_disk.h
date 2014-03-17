@@ -2,16 +2,15 @@
 
 #include "config.h"
 
+typedef enum gas_decrease
+		{ 
+			GAS_DECREASE_CONSTANT,
+			GAS_DECREASE_LINEAR,
+			GAS_DECREASE_EXPONENTIAL
+		} gas_decrease_t;
+
 class gas_disk
 {
-public:
-	typedef enum gas_decrease
-			{ 
-				CONSTANT,
-				LINEAR,
-				EXPONENTIAL
-			} gas_decrease_t;
-
 public:
 	gas_decrease_t gas_decrease;		// The decrease type for the gas density
 
