@@ -1,6 +1,6 @@
 // includes, system 
 #include <ctime>
-#include <cstdint>
+//#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -50,6 +50,8 @@ static cudaError_t HandleError(cudaError_t cudaStatus, const char *file, int lin
 
 /* Returns the amount of microseconds (10^-6) elapsed since the UNIX epoch. Works on both
  * windows and linux. */
+
+typedef long int64_t;
 
 int64_t GetTimeMicro64()
 {
