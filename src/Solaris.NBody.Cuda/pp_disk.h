@@ -11,15 +11,16 @@ class gas_disk;
 
 using namespace std;
 
+typedef enum migration_type
+{
+	MIGRATION_TYPE_NO,
+	MIGRATION_TYPE_TYPE_I,
+	MIGRATION_TYPE_TYPE_II
+} migration_type_t;
+
 class pp_disk : public ode
 {
 public:
-	typedef enum migration_type
-	{
-		NO,
-		TYPE_I,
-		TYPE_II
-	} migration_type_t;
 
 	// Type for parameters
 	typedef struct param

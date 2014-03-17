@@ -553,10 +553,10 @@ void calculate_migrateI_accel_kernel(interaction_bound iBound, var_t rFactor, co
 	var_t r = norm((vec_t*)&coor[bodyIdx]);
 	if (params[bodyIdx].migStopAt > r) {
 		acce[tid].x = acce[tid].y = acce[tid].z = acce[tid].w = 0.0;
-		params[bodyIdx].migType = pp_disk::migration_type::NO;
+		params[bodyIdx].migType = MIGRATION_TYPE_NO;
 	}
 
-	if (bodyIdx < iBound.sink.y && params[bodyIdx].migType == pp_disk::migration_type::TYPE_I) {
+	if (bodyIdx < iBound.sink.y && params[bodyIdx].migType == MIGRATION_TYPE_TYPE_I) {
 		var_t a = 0.0, e = 0.0;
 		var_t mu = K2*(params[0].mass + params[bodyIdx].mass);
 		calculate_sma_ecc(mu, (vec_t*)(&coor[bodyIdx]), (vec_t*)(&velo[bodyIdx]), &a, &e);
