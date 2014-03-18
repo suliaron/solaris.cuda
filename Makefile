@@ -4,15 +4,16 @@ LINK   = $(NVCC)
 
 # Flags
 COMMONFLAGS = -O2
-NVCCFLAGS   = --compiler-options -fno-strict-aliasing -arch sm_21
+NVCCFLAGS   = $(COMMONFLAGS) --compiler-options -fno-strict-aliasing -arch sm_21
 
 # Paths
 SOLINT  	= src/Solaris.Integrator.Cuda
 SOLARIS     = src/Solaris.NBody.Cuda
 SOLTEST     = src/Solaris.NBody.Cuda.Test
 
-INCLUDES    = -I:/usr/lib/nvidia-cuda-toolkit/include -Iconfig -I$(SOLINT) -I$(SOLARIS)
-LIBS        = -L/usr/lib/nvidia-cuda-toolkit/lib
+CUDA        = /usr/lib/nvidia-cuda-toolkit
+INCLUDES    = -I$(CUDA)/include -Iconfig -I$(SOLINT) -I$(SOLARIS)
+LIBS        = -L$(CUDA)/lib
 BIN         = bin
 
 
@@ -27,8 +28,6 @@ $(BIN)/solaris.a : $(BIN)/integrator.a $(BIN)/gas_disk.o $(BIN)/nbody.o $(BIN)/n
 
 $(BIN)/soltest : $(BIN)/integrator.a $(BIN)/solaris.a $(BIN)/unit_test_performance_cpu_vs_gpu.o
 	$(LINK) $(LIBS) -o $@ $?
-
-#	$(LINK) $(LIBS) -o $(BIN)/soltest $(BIN)/euler.o $(BIN)/integrator.o $(BIN)/integrator_exception.o $(BIN)/midpoint.o $(BIN)/ode.o $(BIN)/rk4.o $(BIN)/rkn76.o $(BIN)/rungekutta.o $(BIN)/rungekuttanystrom.o $(BIN)/util.o $(BIN)/gas_disk.o $(BIN)/nbody.o $(BIN)/nbody_exception.o $(BIN)/number_of_bodies.o
 
 $(BIN):
 	mkdir $(BIN)
