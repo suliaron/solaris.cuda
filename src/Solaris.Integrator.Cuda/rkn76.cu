@@ -1,5 +1,6 @@
 // includes system 
 #include <sstream>      // std::ostringstream
+#include <cstdio>
 
 // include CUDA
 #include "cuda_runtime.h"

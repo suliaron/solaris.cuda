@@ -1,3 +1,6 @@
+// include system
+#include <cstdio>
+
 #include "rungekutta.h"
 #include "util.h"
 
