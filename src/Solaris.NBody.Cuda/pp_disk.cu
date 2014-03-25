@@ -870,6 +870,57 @@ pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
 	return h_orbelem;
 }
 
+double	pp_disk::get_total_mass()
+{
+	var_t totalMass = 0.0;
+
+	param_t* param = (param_t*)h_p.data();
+	for (int j = 0; j < nBodies->n_massive(); j++ ) {
+		totalMass += param[j].mass;
+	}
+
+	return totalMass;
+}
+
+void	pp_disk::compute_bc(var_t M0, vec_t* R0, vec_t* V0)
+{
+	vec_t* coor = (vec_t*)h_y[0].data();
+	vec_t* velo = (vec_t*)h_y[1].data();
+	param_t* param = (param_t*)h_p.data();
+
+	for (int j = 0; j < nBodies->n_massive(); j++ ) {
+		R0->x += param[j].mass * coor[j].x;
+		R0->y += param[j].mass * coor[j].y;
+		R0->z += param[j].mass * coor[j].z;
+
+		V0->x += param[j].mass * velo[j].x;
+		V0->y += param[j].mass * velo[j].y;
+		V0->z += param[j].mass * velo[j].z;
+	}
+	R0->x /= M0;	R0->y /= M0;	R0->z /= M0;
+	V0->x /= M0;	V0->y /= M0;	V0->z /= M0;
+}
+
+void pp_disk::transform_to_bc()
+{
+	vec_t* coor = (vec_t*)h_y[0].data();
+	vec_t* velo = (vec_t*)h_y[1].data();
+
+	var_t totalMass = get_total_mass();
+
+	// Position and velocity of the system's barycenter
+	vec_t R0 = {0.0, 0.0, 0.0, 0.0};
+	vec_t V0 = {0.0, 0.0, 0.0, 0.0};
+
+	compute_bc(totalMass, &R0, &V0);
+
+	// Transform the bodies coordinates and velocities
+	for (int j = 0; j < nBodies->n_total(); j++ ) {
+		coor[j].x -= R0.x;		coor[j].y -= R0.y;		coor[j].z -= R0.z;
+		velo[j].x -= V0.x;		velo[j].y -= V0.y;		velo[j].z -= V0.z;
+	}
+}
+
 void pp_disk::load(string filename, int n)
 {
 	vec_t* coor = (vec_t*)h_y[0].data();

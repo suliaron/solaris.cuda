@@ -331,6 +331,8 @@ pp_disk*	options::create_pp_disk()
 	else {
 		;
 	}
+	ppd->transform_to_bc();
+
 	ppd->copy_to_device();
 
 	return ppd;

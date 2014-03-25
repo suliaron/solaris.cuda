@@ -13,6 +13,11 @@ number_of_bodies::number_of_bodies(int star, int giant_planet, int rocky_planet,
 	total_rounded_up = 0;
 }
 
+int	number_of_bodies::n_total()
+{
+	return star + giant_planet + rocky_planet + proto_planet + super_planetesimal + planetesimal + test_particle;
+}
+
 int	number_of_bodies::n_massive()
 {
 	return star + giant_planet + rocky_planet + proto_planet + super_planetesimal + planetesimal;

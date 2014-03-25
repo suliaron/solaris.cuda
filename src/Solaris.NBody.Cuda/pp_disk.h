@@ -79,6 +79,17 @@ public:
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);
 
+	void transform_to_bc();
+	//! Computes the total mass of the system
+	double	get_total_mass();
+	//! Compute the position and velocity of the system's barycenter
+	/*  
+		\param M0 will contains the total mass of the system
+		\param R0 will contain the position of the barycenter
+		\param V0 will contain the velocity of the barycenter
+	*/
+	void	compute_bc(var_t M0, vec_t* R0, vec_t* V0);
+
 	//! Calls the cpu function that calculates the accelerations from gravitational
 	/*  interactions.
 		\param iBound containes the staring and ending indicies of the sink and source bodies

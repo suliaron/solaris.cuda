@@ -413,6 +413,198 @@ void print_body_record(std::ofstream &output, int_t bodyId, var_t t, param_t *pa
 	output << endl;
 }
 
+int generate_Rezso_disk(string path, var2_t disk, number_of_bodies *nBodies)
+{
+	var_t t = 0.0;
+	int_t bodyId = 0;
+
+	param_t param0;
+	param_t param;
+	vec_t	rVec = {0.0, 0.0, 0.0, 0.0};
+	vec_t	vVec = {0.0, 0.0, 0.0, 0.0};
+
+	std::ofstream	output;
+	output.open(path, std::ios_base::app);
+
+	// Output central mass
+	param0.id = bodyId++;
+	param0.mass = 2.0;
+	param0.radius = 3.0 * Constants::SolarRadiusToAu;
+	param0.density = calculate_density(param0.mass, param0.radius);
+	param0.cd = 0.0;
+	param0.migType = NO;
+	param0.migStopAt = 0.0;
+	print_body_record(output, bodyId, t, &param0, &rVec, &vVec);
+
+	srand (time(0));
+	orbelem oe;
+
+	// Output giant planets
+	{
+		oe.sma = 64.5;
+		oe.ecc = 0.0;
+		oe.inc = 0.0;
+		oe.peri = 0.0;
+		oe.node = 0.0;
+		oe.mean = 0.0;
+
+		param.id = bodyId++;
+		param.mass = 5.0 * Constants::JupiterToSolar;
+		param.density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = calculate_radius(param.mass, param.density);
+		param.cd = 0.0;
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	// Output rocky planets
+	for (int i = 0; i < nBodies->rocky_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.1, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.mass = generate_random(0.1, 10.0, pdf_const) * Constants::EarthToSolar;
+		param.density = generate_random(3.0, 5.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = calculate_radius(param.mass, param.density);
+		param.cd = 0.0;
+		param.migType = TYPE_I;
+		param.migStopAt = 0.4;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	// Output proto planets
+	for (int i = 0; i < nBodies->proto_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = 0.0;
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = 0.0;
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.mass = 1.58e-4 * Constants::EarthToSolar; // this is one Ceres mass
+		param.density = generate_random(1.5, 3.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = calculate_radius(param.mass, param.density);
+		param.cd = 0.0;
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	// Output super-planetesimals
+	for (int i = 0; i < nBodies->super_planetesimal; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.2, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.mass = generate_random(0.0001, 0.01, pdf_const) * Constants::EarthToSolar;
+		param.density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
+		param.cd = generate_random(0.5, 4.0, pdf_const);
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	// Output planetesimals
+	for (int i = 0; i < nBodies->planetesimal; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = 0.0;
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = 0.0;
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
+		param.mass = caclulate_mass(param.radius, param.density);
+		param.cd = generate_random(0.5, 4.0, pdf_const);
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	// Output test particles
+	for (int i = 0; i < nBodies->test_particle; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.2, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.density = 0.0;
+		param.radius = 0.0;
+		param.mass = 0.0;
+		param.cd = 0.0;
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+	output.flush();
+	output.close();
+
+	return 0;
+}
+
 int generate_pp_disk(string path, var2_t disk, number_of_bodies *nBodies)
 {
 	var_t t = 0.0;
@@ -709,8 +901,11 @@ int main(int argc, const char **argv)
 
 	srand(time(NULL));
 
-	var2_t disk = {5.0, 6.0};	// AU
-	retCode = generate_pp_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
+	//var2_t disk = {5.0, 6.0};	// AU
+	//retCode = generate_pp_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
 
+	var2_t disk = {65, 270};
+	retCode = generate_Rezso_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
+	
 	return retCode;
 }
