@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "config.h"
 #include "integrator.h"
@@ -16,7 +17,7 @@ private:
 	bool	adaptive;
 	var_t	tolerance;
 
-	std::vector< std::vector<d_var_t> >	d_k;
+	std::vector< std::vector<d_var_t> >	d_f;
 	std::vector<d_var_t>				d_ytemp;
 
 	dim3	grid;
@@ -31,4 +32,5 @@ public:
 	~midpoint();
 
 	ttt_t	step();
+	string get_name();
 };

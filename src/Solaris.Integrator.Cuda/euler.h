@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "config.h"
 #include "integrator.h"
@@ -15,4 +16,5 @@ public:
 	~euler();
 
 	ttt_t step();
+	std::string get_name();
 };

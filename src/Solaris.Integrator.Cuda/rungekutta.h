@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "config.h"
 #include "integrator.h"
@@ -16,7 +17,7 @@ private:
 	bool_t adaptive;
 	var_t tolerance;
 	
-	std::vector< std::vector< d_var_t> > d_k;	// Differentials on the device
+	std::vector< std::vector< d_var_t> > d_f;	// Differentials on the device
 	std::vector<d_var_t> d_ytemp;				// Values on the device
 
 public:
@@ -24,4 +25,5 @@ public:
 	~rungekutta();
 
 	ttt_t step();
+	std::string get_name();
 };

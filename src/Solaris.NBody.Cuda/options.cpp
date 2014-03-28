@@ -12,6 +12,7 @@
 #include "rkn76.h"
 #include "rungekutta.h"
 #include "rungekuttanystrom.h"
+#include "rkf7.h"
 
 options::options(int argc, const char** argv)
 {
@@ -57,6 +58,7 @@ void options::print_usage()
 	cout << "                          E : Euler" << endl;
 	cout << "                          oRK2 : optimized 2nd order Runge-Kutta" << endl;
 	cout << "                          oRK4 : optimized 4th order Runge-Kutta" << endl;
+	cout << "                          RKF78: 7(8)th order Runge-Kutta-Fehlberg method" << endl;
 	cout << "                          oRKN : optimized 7(6) Runge-Kutta-Nystrom" << endl;
 	cout << "                          RK2  : 2nd order Runge-Kutta" << endl;
 	cout << "                          RK4  : 4th order Runge-Kutta" << endl;
@@ -129,6 +131,9 @@ void options::parse_options(int argc, const char** argv)
 			else if (p == "RK4")	{
 				inttype = INTEGRATOR_RUNGEKUTTA4;
 			}
+			else if (p == "RKF78")	{
+				inttype = INTEGRATOR_RUNGEKUTTAFEHLBERG78;
+			}			
 			else if (p == "oRK4")	{
 				inttype = INTEGRATOR_OPT_RUNGEKUTTA4;
 			}
@@ -358,6 +363,9 @@ integrator* options::create_integrator(ode* f)
 		break;
 	case INTEGRATOR_OPT_RUNGEKUTTA4:
 		intgr = new rk4(*f, dt, adaptive, tolerance);
+		break;
+	case INTEGRATOR_RUNGEKUTTAFEHLBERG78:
+		intgr = new rkf7(*f, dt, adaptive, tolerance);
 		break;
 	case INTEGRATOR_RUNGEKUTTANYSTROM:
 		intgr = new rungekuttanystrom<9>(*f, dt, adaptive, tolerance);

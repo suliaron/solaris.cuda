@@ -26,6 +26,7 @@
     <ClInclude Include="midpoint.h" />
     <ClInclude Include="ode.h" />
     <ClInclude Include="rk4.h" />
+    <ClInclude Include="rkf7.h" />
     <ClInclude Include="rkn76.h" />
     <ClInclude Include="rungekutta.h" />
     <ClInclude Include="rungekuttanystrom.h" />
@@ -36,6 +37,7 @@
     <CudaCompile Include="midpoint.cu" />
     <CudaCompile Include="ode.cu" />
     <CudaCompile Include="rk4.cu" />
+    <CudaCompile Include="rkf7.cu" />
     <CudaCompile Include="rkn76.cu" />
     <CudaCompile Include="rungekutta.cu" />
     <CudaCompile Include="rungekuttanystrom.cu" />

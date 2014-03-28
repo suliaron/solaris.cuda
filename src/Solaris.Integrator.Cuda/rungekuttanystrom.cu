@@ -27,7 +27,7 @@ rungekuttanystrom<RKOrder>::rungekuttanystrom(ode& f, ttt_t dt, bool adaptive, v
 	integrator(f, dt),
 	adaptive(adaptive),
 	tolerance(tolerance),
-	d_k(f.get_order()),
+	d_f(f.get_order()),
 	d_ytemp(f.get_order())
 {
 	int forder = f.get_order();
@@ -39,10 +39,10 @@ rungekuttanystrom<RKOrder>::rungekuttanystrom(ode& f, ttt_t dt, bool adaptive, v
 
 	size_t size = f.h_y[0].size();
 
-	d_k.resize(RKOrder);
+	d_f.resize(RKOrder);
 	for (int r = 0; r < RKOrder; r++)
 	{
-		d_k[r].resize(size);
+		d_f[r].resize(size);
 	}
 	d_ytemp[0].resize(size);
 	d_yhtemp.resize(size);
@@ -64,11 +64,12 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 	// d_ytemp: intermediate coordinates (X)
 	// d_yhtemp: intermediate coordinates (X^)
 	// d_dytemp: intermediate coordinates (X'^)
-	// d_k: intermediate differentials (f)
+	// d_f: intermediate differentials (f)
 
 	var_t max_err;
 	ttt_t dttemp;
 
+	int_t iter = 0;
 	do
 	{
 		ttt_t ttemp;
@@ -84,12 +85,12 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 			// Calculate temporary values of x
 			for (int s = 0; s < r; s++)
 			{
-				sum_vec(d_ytemp[0], d_ytemp[0], d_k[s], a[rr] * (var_t)(dt * dt));
+				sum_vec(d_ytemp[0], d_ytemp[0], d_f[s], a[rr] * (var_t)(dt * dt));
 				rr++;
 			}
 
 			// Only calculate acceleration here, not velocities
-			f.calculate_dy(1, r, ttemp, f.d_p, d_ytemp, d_k[r]);
+			f.calculate_dy(1, r, ttemp, f.d_p, d_ytemp, d_f[r]);
 		}
 
 		// Now the acceleration matrix is done, update variables and
@@ -104,11 +105,11 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 		// Sum up orders
 		for (int r = 0; r < RKOrder; r++)
 		{
-			sum_vec(d_ytemp[0], d_ytemp[0], d_k[r], b[r] * (var_t)(dt * dt));
-			sum_vec(d_dytemp, d_dytemp, d_k[r], bd[r] * (var_t)dt);
+			sum_vec(d_ytemp[0], d_ytemp[0], d_f[r], b[r] * (var_t)(dt * dt));
+			sum_vec(d_dytemp, d_dytemp, d_f[r], bd[r] * (var_t)dt);
 			if (adaptive)
 			{
-				sum_vec(d_yhtemp, d_yhtemp, d_k[r], bh[r] * (var_t)(dt * dt));
+				sum_vec(d_yhtemp, d_yhtemp, d_f[r], bh[r] * (var_t)(dt * dt));
 			}
 		}
 
@@ -117,7 +118,7 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 
 		if (adaptive)
 		{
-			absdiff_vec(d_err, d_k[RKOrder - 2], d_k[RKOrder - 1], (var_t)(dt * dt) * err);
+			absdiff_vec(d_err, d_f[RKOrder - 2], d_f[RKOrder - 1], (var_t)(dt * dt) * err);
 
 			// Find max of error and calculate new dt estimate
 			max_err = max_vec(d_err);
@@ -125,8 +126,10 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 			// Update step size
 			dt *= 1.0e-15 > max_err ? 2.0 : 0.9 * pow(tolerance / max_err, (var_t)1.0 / RKOrder);
 		}
-	}
-	while (adaptive && max_err > tolerance);
+		iter++;
+	} while (adaptive && max_err > tolerance);
+	n_failed_step += (iter - 1);
+	n_step++;
 
 	// Time step is now accurate enough
 	// Propagate variables
@@ -139,6 +142,18 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 	f.swap_in_out();
 
 	return dt;
+}
+
+template <int RKOrder>
+std::string rungekuttanystrom<RKOrder>::get_name()
+{
+	switch (RKOrder) 
+	{
+	case 9:
+		return adaptive ? "a_RungeKuttaNystrom76" : "RungeKuttaNystrom76";
+	default:
+		return "unknown";
+	}
 }
 
 template class rungekuttanystrom<9>;

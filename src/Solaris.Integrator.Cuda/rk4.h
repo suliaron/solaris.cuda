@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "config.h"
 #include "integrator.h"
@@ -23,7 +24,7 @@ private:
 	var_t	tolerance;
 
 	//! Holds the derivatives for the differential equations
-	std::vector<std::vector <d_var_t> >	d_k;
+	std::vector<std::vector <d_var_t> >	d_f;
 	//! Holds the temporary solution approximation along the step
 	std::vector<d_var_t>				d_ytemp;
 	//! Holds the leading local truncation error for each variable
@@ -33,15 +34,15 @@ private:
 	dim3	block;
 
 	void calculate_grid(int nData, int threads_per_block);
-	void call_calc_ytemp_for_kr_kernel(int r);
+	void call_calc_ytemp_for_fr_kernel(int r);
 	void call_calc_yHat_kernel();
 	void call_calc_y_kernel();
-	void call_calc_k4_sub_k5_kernel();
+	void call_calc_f4_sub_f5_kernel();
 
 public:
 	rk4(ode& f, ttt_t, bool adaptive, var_t tolerance);
 	~rk4();
 
 	ttt_t step();
-
+	std::string get_name();
 };

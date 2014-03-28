@@ -30,9 +30,17 @@ ttt_t euler::step()
 	for (int i = 0; i < forder; i ++) {
 		sum_vec(f.d_yout[i], f.d_y[i], d_dy[i], (var_t)dt);
 	}
+	n_failed_step += 0;
+	n_step++;
+
 	// Propagate time
 	f.tout = f.t + dt;
 	f.swap_in_out();
 
 	return dt;
+}
+
+std::string euler::get_name()
+{
+	return "Euler";
 }

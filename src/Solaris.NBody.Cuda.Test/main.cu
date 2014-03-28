@@ -1,10 +1,9 @@
-// includes, system 
+// includes system 
 #include <ctime>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
-
 
 // includes CUDA
 #include "cuda_runtime.h"
@@ -15,6 +14,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/reduce.h>
 
+// includes project
 #include "config.h"
 #include "nbody.h"
 #include "nbody_exception.h"
@@ -136,7 +136,7 @@ int main(int argc, const char** argv)
 		else {
 			//collisionsf = new ofstream(combine_path(opt.printoutDir, "col.txt").c_str());
 			//positionsf = new ofstream(get_printout_file(opt, pcount++).c_str());
-			filename = get_filename_without_ext(opt.filename) + ".oRKN.ppd." + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
+			filename = get_filename_without_ext(opt.filename) + '.' + intgr->get_name() + '.' + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
 			string filenameWithExt = filename + get_extension(opt.filename);
 			positionsf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
 			filenameWithExt = filename + "oe." + get_extension(opt.filename);

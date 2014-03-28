@@ -52,7 +52,7 @@ void midpoint::calc_ytemp_for_k2()
 		int n		= f.d_y[i].size();
 		var_t *y_n	= f.d_y[i].data().get();
 		var_t *ytemp= d_ytemp[i].data().get();
-		var_t *k1	= d_k[i][0].data().get();
+		var_t *k1	= d_f[i][0].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
 		sum_vector_kernel<<<grid, block>>>(n, ytemp, y_n, k1, a[0] * dt);
@@ -69,7 +69,7 @@ void midpoint::calc_y_np1()
 		int n		= f.d_y[i].size();
 		var_t *y_n	= f.d_y[i].data().get();
 		var_t *y_np1= f.d_yout[i].data().get();
-		var_t *k2	= d_k[i][1].data().get();
+		var_t *k2	= d_f[i][1].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
 		sum_vector_kernel<<<grid, block>>>(n, y_np1, y_n, k2, b[1] * dt);
@@ -84,7 +84,7 @@ midpoint::midpoint(ode& f, ttt_t dt, bool adaptive, var_t tolerance) :
 		integrator(f, dt),
 		adaptive(adaptive),
 		tolerance(tolerance),
-		d_k(f.get_order()),
+		d_f(f.get_order()),
 		d_ytemp(f.get_order(), d_var_t())
 {
 	RKOrder = 2;
@@ -92,9 +92,9 @@ midpoint::midpoint(ode& f, ttt_t dt, bool adaptive, var_t tolerance) :
 
 	for (int i = 0; i < forder; i++) {
 		d_ytemp[i].resize(f.d_y[i].size());
-		d_k[i].resize(RKOrder);
+		d_f[i].resize(RKOrder);
 		for (int r = 0; r < RKOrder; r++) {
-			d_k[i][r].resize(f.d_y[i].size());
+			d_f[i][r].resize(f.d_y[i].size());
 		} 
 	}
 }
@@ -107,23 +107,31 @@ ttt_t	midpoint::step()
 
 	int r = 0;
 
-	// Calculate k1 = f(tn, yn) = d_k[][0]
+	// Calculate k1 = f(tn, yn) = d_f[][0]
 	ttt_t ttemp = f.t + c[r] * dt;
 	for (int i = 0; i < forder; i++) {
-		f.calculate_dy(i, r, ttemp, f.d_p, f.d_y, d_k[i][r]);
+		f.calculate_dy(i, r, ttemp, f.d_p, f.d_y, d_f[i][r]);
 	}
 
 	r = 1;
-	// Calculate k2 = f(tn + c1 * dt, yn + a21 * dt * k1) = d_k[][1]
+	// Calculate k2 = f(tn + c1 * dt, yn + a21 * dt * k1) = d_f[][1]
 	calc_ytemp_for_k2();
 	ttemp = f.t + c[r] * dt;
 	for (int i = 0; i < forder; i++) {
-		f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_k[i][r]); 
+		f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]); 
 	}
-
 	calc_y_np1();
+
+	n_failed_step += 0;
+	n_step++;
+
 	f.tout = f.t + dt;
 	f.swap_in_out();
 
 	return dt;
+}
+
+string midpoint::get_name()
+{
+	return adaptive ? "a_Midpoint" : "Midpoint";
 }

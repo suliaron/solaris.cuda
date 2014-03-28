@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "config.h"
 #include "ode.h"
@@ -21,5 +22,6 @@ public:
 	int_t get_n_failed_step();
 	int_t get_n_step();
 
-	virtual ttt_t step() = 0;	
+	virtual ttt_t step() = 0;
+	virtual std::string get_name() = 0;
 };

@@ -13,9 +13,21 @@
 #include <thrust/reduce.h>
 
 //#include "config.h"
-//#include "planets.h"
 #include "constants.h"
 #include "gas_disk.h"
+#include "number_of_bodies.h"
+#include "options.h"
+#include "ode.h"
+#include "pp_disk.h"
+
+#include "integrator.h"
+#include "euler.h"
+#include "integrator_exception.h"
+#include "midpoint.h"
+#include "rk4.h"
+#include "rkn76.h"
+#include "rungekutta.h"
+#include "rungekuttanystrom.h"
 
 
 using namespace std;
@@ -385,6 +397,81 @@ var_t	orbital_frequency(var_t mu, var_t sma)
 	return 1.0 / orbital_period(mu, sma);;
 }
 
+
+int unit_test_integrator()
+{
+	bool	succeeded = true;
+	char	func_name[256];
+	char	err_msg[1024];
+
+	cout << "The unit_test_integrator() started.\n\nThe unit test of the" << endl;
+
+	{
+		bool	failed = false;
+		strcpy(func_name, "get_name()");
+
+		number_of_bodies nBodies(1,1,0,0,0,0,0);
+		pp_disk *ppd = new pp_disk(&nBodies, 0, 0);
+
+		integrator* intgr = new euler(*ppd, 0.0);
+		if ("Euler" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new rungekutta<2>(*ppd, 0.0, false, 0.0);
+		if ("RungeKutta2" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new midpoint(*ppd, 0.0, false, 0.0);
+		if ("Midpoint" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new rungekutta<4>(*ppd, 0.0, false, 0.0);
+		if ("RungeKutta4" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new rk4(*ppd, 0.0, false, 0.0);
+		if ("optRungeKutta4" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new rungekuttanystrom<9>(*ppd, 0.0, false, 0.0);
+		if ("RungeKuttaNystrom76" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+
+		intgr = new rkn76(*ppd, 0.0, false, 0.0);
+		if ("optRungeKuttaNystrom76" != intgr->get_name()) {
+			sprintf(err_msg, "\t%30s() function failed at line %d.", func_name, __LINE__);
+			cerr << err_msg << endl;
+			failed = true;
+		}
+		delete intgr;
+	}
+
+	return succeeded ? 0 : 1;
+}
 
 int	unit_test_of_nbody_util()
 {
@@ -943,6 +1030,20 @@ int main(int argc, const char** argv)
 		strcpy(func_name, "unit_test_of_nbody_util");
 
 		result = unit_test_of_nbody_util();
+		if (0 == result) {
+			sprintf(err_msg, "The unit test(s) of the %s() function passed.", func_name);
+			cout << endl << err_msg << endl;
+		}
+		else {
+			sprintf(err_msg, "The unit test(s) of the %s() function failed.", func_name);
+			cout << endl << err_msg << endl;
+		}
+	}
+
+	{
+		strcpy(func_name, "unit_test_integrator");
+
+		result = unit_test_integrator();
 		if (0 == result) {
 			sprintf(err_msg, "The unit test(s) of the %s() function passed.", func_name);
 			cout << endl << err_msg << endl;
