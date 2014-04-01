@@ -4,15 +4,11 @@
 #include "config.h"
 #include "integrator.h"
 #include "ode.h"
+#include "rkorder.h"
 
-template <int RKOrder>
+template <class RKOrder>
 class rungekutta : public integrator
 {
-public:
-	static var_t a[];
-	static var_t b[];
-	static ttt_t c[];
-
 private:
 	bool_t adaptive;
 	var_t tolerance;
@@ -25,5 +21,5 @@ public:
 	~rungekutta();
 
 	ttt_t step();
-	std::string get_name();
+	virtual std::string get_name();
 };

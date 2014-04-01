@@ -28,6 +28,7 @@
     <ClInclude Include="rk4.h" />
     <ClInclude Include="rkf7.h" />
     <ClInclude Include="rkn76.h" />
+    <ClInclude Include="rkorder.h" />
     <ClInclude Include="rungekutta.h" />
     <ClInclude Include="rungekuttanystrom.h" />
     <ClInclude Include="util.h" />
@@ -46,6 +47,7 @@
   <ItemGroup>
     <ClCompile Include="integrator.cpp" />
     <ClCompile Include="integrator_exception.cpp" />
+    <ClCompile Include="rkorder.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B72C111A-68EC-41F8-8E06-F3A11B017802}</ProjectGuid>
