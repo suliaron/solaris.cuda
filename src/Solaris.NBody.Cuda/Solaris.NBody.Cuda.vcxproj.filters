@@ -44,6 +44,9 @@
     <CudaCompile Include="pp_disk.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="gas_disk.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nbody_exception.cpp">
@@ -53,9 +56,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="number_of_bodies.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gas_disk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

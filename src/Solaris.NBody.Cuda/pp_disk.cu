@@ -389,20 +389,25 @@ var_t	reduction_factor(const gas_disk* gasDisk, ttt_t t)
 {
 	switch (gasDisk->gas_decrease) 
 	{
-	case GAS_DECREASE_CONSTANT:
+	case GAS_DENSITY_CONSTANT:
 		return 1.0;
-	case GAS_DECREASE_LINEAR:
+	case GAS_DENSITY_DECREASE_LINEAR:
 		if (t <= gasDisk->t0) {
 			return 1.0;
 		}
-		else if (t > gasDisk->t0 && t <= gasDisk->t1) {
+		else if (gasDisk->t0 < t && t <= gasDisk->t1 && gasDisk->t0 != gasDisk->t1) {
 			return 1.0 - (t - gasDisk->t0)/(gasDisk->t1 - gasDisk->t0);
 		}
 		else {
 			return 0.0;
 		}
-	case GAS_DECREASE_EXPONENTIAL:
-		return exp(-t/gasDisk->timeScale);
+	case GAS_DENSITY_DECREASE_EXPONENTIAL:
+		if (t <= gasDisk->t0) {
+			return 1.0;
+		}
+		else {
+			return exp(-(t - gasDisk->t0)/gasDisk->e_folding_time);
+		}
 	default:
 		return 1.0;
 	}
@@ -447,6 +452,13 @@ var_t typeI_eccentricity_damping_time(var_t C, var_t O, var_t ar, var_t er, var_
 	return result;
 }
 #undef Q
+
+static __host__ __device__
+var_t  mean_thermal_speed_CMU(const gas_disk* gasDisk, var_t r)
+{
+	return gasDisk->c_vth * sqrt(gasDisk->temp.x * pow(r, gasDisk->temp.y));
+}
+
 
 
 // a = a + b
@@ -515,22 +527,28 @@ void calculate_drag_accel_kernel(interaction_bound iBound, var_t rFactor, const 
 	if (bodyIdx < iBound.sink.y) {
 		vec_t vGas	 = gas_velocity(gasDisk->eta, K2*params[0].mass, (vec_t*)&coor[bodyIdx]);
 		var_t rhoGas = rFactor * gas_density_at(gasDisk, (vec_t*)&coor[bodyIdx]);
+		var_t r = norm((vec_t*)&coor[bodyIdx]);
 
 		vec_t u;
 		u.x	= velo[bodyIdx].x - vGas.x;
 		u.y	= velo[bodyIdx].y - vGas.y;
 		u.z	= velo[bodyIdx].z - vGas.z;
-		var_t C		= 0.0;
-		// TODO: implement the different regimes according to the mean free path of the gas molecules
-		// Epstein-regime:
-		{
+		var_t C	= 0.0;
 
+		var_t lambda = gasDisk->mfp.x * pow(r, gasDisk->mfp.y);
+		// Epstein-regime:
+		if (     params[bodyIdx].radius <= 0.1 * lambda)
+		{
+			var_t vth = mean_thermal_speed_CMU(gasDisk, r);
+			C = params[bodyIdx].gamma_epstein * vth * rhoGas;
 		}
 		// Stokes-regime:
+		else if (params[bodyIdx].radius >= 10.0 * lambda)
 		{
 			C = params[bodyIdx].gamma_stokes * norm(&u) * rhoGas;
 		}
-		// Transition regime:
+		// Transition-regime:
+		else
 		{
 
 		}
@@ -540,6 +558,9 @@ void calculate_drag_accel_kernel(interaction_bound iBound, var_t rFactor, const 
 		acce[tid].z = -C * u.z;
 		acce[tid].w = 0.0;
 
+		//printf("acce[tid].x: %10le\n", acce[tid].x);
+		//printf("acce[tid].y: %10le\n", acce[tid].y);
+		//printf("acce[tid].z: %10le\n", acce[tid].z);
 	}
 }
 

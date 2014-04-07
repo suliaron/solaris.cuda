@@ -101,8 +101,6 @@ midpoint::midpoint(ode& f, ttt_t dt, bool adaptive, var_t tolerance) :
 
 ttt_t	midpoint::step()
 {
-	cudaError cudaStatus = cudaSuccess;
-
 	int	forder = f.get_order();
 
 	int r = 0;

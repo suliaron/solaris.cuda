@@ -527,6 +527,12 @@ ttt_t rkf7::step()
 			}
 		}
 		iter++;
+		// Implement a minimum step-size kriterion and accept the current approximation
+		if (240.0 > dt_try)
+		{
+			dt_try = 250.0;
+			break;
+		}
 	} while (adaptive && max_err > 1.0);
 	n_failed_step += (iter - 1);
 	n_step++;

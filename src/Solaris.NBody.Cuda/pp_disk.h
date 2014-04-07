@@ -99,7 +99,8 @@ public:
 	*/
 	void calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce);
 
-private:
+// TODO: change back to private
+//private:
 	dim3	grid;
 	dim3	block;
 

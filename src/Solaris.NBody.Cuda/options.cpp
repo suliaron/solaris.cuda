@@ -104,16 +104,7 @@ void options::parse_options(int argc, const char** argv)
 		}
 		// Initialize a gas_disk object with default values
 		else if (p == "-gas") {
-			var2_t eta = {2.0e-3,   1.0/2.0	};
-			var2_t rho = {1.0e-9, -11.0/4.0	};		// g / cm^3
-			var2_t sch = {5.0e-2,   5.0/4.0	};
-			var2_t tau = {2.0/3.0,  2.0		};
-			rho.x	*= Constants::GramPerCm3ToSolarPerAu3; // M_sun / AU^3
-			ttt_t	t0 = 0.0;
-			ttt_t	t1 = 100.0 * Constants::YearToDay;
-			ttt_t	timeScale = 10.0 * Constants::YearToDay;
-			gas_decrease_t gasDecrease = GAS_DECREASE_CONSTANT;
-			gasDisk = new gas_disk(rho, sch, eta, tau, gasDecrease, t0, t1, timeScale);
+			gasDisk = new gas_disk;
 		}
 		// Integrator type
 		else if (p == "-i") {

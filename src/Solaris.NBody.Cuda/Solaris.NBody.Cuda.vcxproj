@@ -30,13 +30,13 @@
     <ClInclude Include="options.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="gas_disk.cu" />
     <CudaCompile Include="pp_disk.cu" />
     <CudaCompile Include="nbody.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="gas_disk.cpp" />
     <ClCompile Include="nbody_exception.cpp" />
     <ClCompile Include="number_of_bodies.cpp" />
     <ClCompile Include="options.cpp" />

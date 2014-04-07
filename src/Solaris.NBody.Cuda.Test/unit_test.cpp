@@ -78,14 +78,6 @@ typedef struct orbelem
 	var_t mean;
 } orbelem_t;
 
-//typedef struct gaspar
-//{
-//	var2_t	rho;
-//	var2_t	sch;
-//	var2_t	eta;
-//	var2_t	tau;
-//} gaspar_t;
-
 #define K			(var_t)0.01720209895
 #define K2			(var_t)0.0002959122082855911025
 
@@ -396,6 +388,7 @@ var_t	orbital_frequency(var_t mu, var_t sma)
 {
 	return 1.0 / orbital_period(mu, sma);;
 }
+
 
 
 int unit_test_integrator()
@@ -1016,6 +1009,21 @@ int	unit_test_of_nbody_util()
 	return succeeded ? 0 : 1;
 }
 
+int unit_test_gas_disk()
+{
+	bool	succeeded = true;
+	char	func_name[256];
+	char	err_msg[1024];
+
+	cout << "The unit_test_gas_disk() started.\n\nThe unit test of the" << endl;
+
+	{
+		bool	failed = false;
+		strcpy(func_name, "get_name()");
+	}
+
+	return succeeded ? 0 : 1;
+}
 
 int main(int argc, const char** argv)
 {

@@ -139,8 +139,8 @@ int main(int argc, const char** argv)
 			filename = get_filename_without_ext(opt.filename) + '.' + intgr->get_name() + '.' + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
 			string filenameWithExt = filename + get_extension(opt.filename);
 			positionsf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
-			filenameWithExt = filename + "oe." + get_extension(opt.filename);
-			orbelemf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
+			//filenameWithExt = filename + "oe." + get_extension(opt.filename);
+			//orbelemf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
 		}
 
 		while (ppd->t < opt.timeStop) {
@@ -153,8 +153,7 @@ int main(int argc, const char** argv)
 				// Start of a print-out period, create new file if necessary
 				if (pp == 0) {
 					var_t avg_dt = (ppd->t - opt.timeStart) / intgr->get_n_step();
-					cout << intgr->get_n_failed_step() << " step(s) failed until time: " << ppd->t << " average dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
-					cerr << setprecision(10) << setw(16) << dt << " [d], ";
+					cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
 					cerr << setprecision(5) << setw(6) << ((ppd->t - opt.timeStart)/opt.timeStop*100) << " %" << endl;
 				}
 
@@ -167,8 +166,8 @@ int main(int argc, const char** argv)
 						// Print out positions
 						ppd->copy_to_host();
 						ppd->print_positions(*positionsf);
-						pp_disk::h_orbelem_t orbelem = ppd->calculate_orbelem(0);
-						ppd->print_orbelem(*orbelemf);
+						//pp_disk::h_orbelem_t orbelem = ppd->calculate_orbelem(0);
+						//ppd->print_orbelem(*orbelemf);
 					}
 				}
 			}
