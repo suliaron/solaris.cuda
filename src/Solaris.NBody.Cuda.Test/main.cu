@@ -24,8 +24,7 @@
 using namespace std;
 
 
-
-string combine_path(string dir, string filename)
+static string combine_path(string dir, string filename)
 {
 	if (dir.size() > 0) {
 		if (*(dir.end() - 1) != '/' && *(dir.end() - 1) != '\\') {
@@ -40,7 +39,7 @@ string combine_path(string dir, string filename)
 	}
 }
 
-string get_filename(const string& path)
+static string get_filename(const string& path)
 {
 	string result;
 
@@ -53,7 +52,7 @@ string get_filename(const string& path)
 	return result;
 }
 
-string get_filename_without_ext(const string& path)
+static string get_filename_without_ext(const string& path)
 {
 	string result;
 
@@ -68,7 +67,7 @@ string get_filename_without_ext(const string& path)
 	return result;
 }
 
-string get_directory(const string& path)
+static string get_directory(const string& path)
 {
 	string result;
 
@@ -81,7 +80,7 @@ string get_directory(const string& path)
 	return result;
 }
 
-string get_extension(const string& path)
+static string get_extension(const string& path)
 {
 	string result;
 
@@ -94,7 +93,7 @@ string get_extension(const string& path)
 	return result;
 }
 
-string get_printout_file(options& opt, int pcount)
+static string get_printout_file(options& opt, int pcount)
 {
 	char buffer[1024];
 	sprintf(buffer, "nBodies_1_127_0_0_0_0_0_RK_ppd2_pos-%.5d.txt", pcount);
