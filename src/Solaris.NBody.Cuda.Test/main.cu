@@ -127,7 +127,6 @@ int main(int argc, const char** argv)
 		int pcount			= 0;
 		int ccount			= 0;
 
-		string filename;
 		if (!opt.printoutToFile) {
 			positionsf = &cout;
 			orbelemf   = &cout;
@@ -136,9 +135,10 @@ int main(int argc, const char** argv)
 		else {
 			//collisionsf = new ofstream(combine_path(opt.printoutDir, "col.txt").c_str());
 			//positionsf = new ofstream(get_printout_file(opt, pcount++).c_str());
-			filename = get_filename_without_ext(opt.filename) + '.' + intgr->get_name() + '.' + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
+			string filename = get_filename_without_ext(opt.filename) + '.' + intgr->get_name() + '.' + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
 			string filenameWithExt = filename + get_extension(opt.filename);
-			positionsf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
+			char *path = (char*)combine_path(opt.printoutDir, filenameWithExt).c_str();
+			positionsf = new ofstream(path, std::ios::app);
 			//filenameWithExt = filename + "oe." + get_extension(opt.filename);
 			//orbelemf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
 		}
