@@ -26,7 +26,7 @@ $(BIN)/integrator.a : $(BIN)/euler.o $(BIN)/integrator.o $(BIN)/integrator_excep
 $(BIN)/solaris.a : $(BIN)/integrator.a $(BIN)/gas_disk.o $(BIN)/nbody.o $(BIN)/nbody_exception.o $(BIN)/number_of_bodies.o $(BIN)/options.o $(BIN)/pp_disk.o
 	ar cr $@ $?
 
-$(BIN)/soltest : $(BIN)/integrator.a $(BIN)/solaris.a $(BIN)/unit_test_performance_cpu_vs_gpu.o
+$(BIN)/soltest : $(BIN)/integrator.a $(BIN)/solaris.a $(BIN)/unit_test_performance_cpu_vs_gpu.o $(BIN)/main.o
 	$(LINK) $(LIBS) -o $@ $?
 
 $(BIN):
