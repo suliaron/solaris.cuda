@@ -20,7 +20,7 @@ BIN         = bin
 #Build rules
 all : $(BIN)/integrator.a $(BIN)/solaris.a $(BIN)/soltest | $(BIN)
 
-$(BIN)/integrator.a : $(BIN)/euler.o $(BIN)/integrator.o $(BIN)/integrator_exception.o $(BIN)/midpoint.o $(BIN)/ode.o $(BIN)/rk4.o $(BIN)/rkn76.o $(BIN)/rungekutta.o $(BIN)/rungekuttanystrom.o $(BIN)/util.o | $(BIN)
+$(BIN)/integrator.a : $(BIN)/euler.o $(BIN)/integrator.o $(BIN)/integrator_exception.o $(BIN)/midpoint.o $(BIN)/ode.o $(BIN)/rk4.o $(BIN)rkf7.o $(BIN)/rkn76.o $(BIN)/rungekutta.o $(BIN)/rungekuttanystrom.o $(BIN)/util.o | $(BIN)
 	ar cr $@ $?
 
 $(BIN)/solaris.a : $(BIN)/integrator.a $(BIN)/gas_disk.o $(BIN)/nbody.o $(BIN)/nbody_exception.o $(BIN)/number_of_bodies.o $(BIN)/options.o $(BIN)/pp_disk.o
