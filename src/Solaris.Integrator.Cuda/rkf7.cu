@@ -10,6 +10,9 @@
 #include "integrator_exception.h"
 #include "rkf7.h"
 #include "util.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 #define THREADS_PER_BLOCK	256
 
@@ -285,11 +288,9 @@ void rkf7::call_calc_ytemp_for_fr_kernel(int r)
 		var_t* f9 = d_f[i][9].data().get();
 		var_t* f10= d_f[i][10].data().get();
 		var_t* f11;
-		var_t* f12;
 		if (adaptive) 
 		{
 			f11	= d_f[i][11].data().get();
-			f12	= d_f[i][12].data().get();
 		}
 
 		switch (r) {
@@ -409,6 +410,14 @@ void rkf7::call_calc_scalederror_kernel()
 			throw integrator_exception("calc_scalederror_kernel failed");
 		}
 	}
+
+	h_var_t h_err = d_err[0];
+	var_t max_1 = *thrust::max_element(h_err.begin(), h_err.end());
+	h_err = d_err[1];
+	var_t max_2 = *thrust::max_element(h_err.begin(), h_err.end());
+
+	cout << "max_1: " << max_1 << endl;
+	cout << "max_2: " << max_2 << endl;
 }
 
 
@@ -475,7 +484,14 @@ ttt_t rkf7::step()
 	// Calculate f0 = f(tn, yn) = d_f[][0]
 	ttt_t ttemp = f.t + c[r] * dt;
 	for (int i = 0; i < forder; i++) {
+#ifdef TIMER
+		cout << "f.calculate_dy start at " << tmr.start() << endl;
+#endif
 		f.calculate_dy(i, r, ttemp, f.d_p, f.d_y, d_f[i][r]);
+#ifdef TIMER
+		cout << "            ... stop at " << tmr.stop() << endl;
+		cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 	}
 
 	dt_try = dt;
@@ -488,34 +504,102 @@ ttt_t rkf7::step()
 		// Calculate f10 = f(tn + c10 * dt, yn + a10,0 * dt * f0 + ...) = d_f[][10]
 		for (r = 1; r <= 10; r++) {
 			ttemp = f.t + c[r] * dt_try;
+#ifdef TIMER
+			cout << "call_calc_ytemp_for_fr_kernel start at " << tmr.start() << endl;
+#endif
 			call_calc_ytemp_for_fr_kernel(r);
+#ifdef TIMER
+			cout << "            ... stop at " << tmr.stop() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 			for (int i = 0; i < forder; i++) {
+#ifdef TIMER
+				cout << "f.calculate_dy start at " << tmr.start() << endl;
+#endif
 				f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]);
+#ifdef TIMER
+				cout << "            ... stop at " << tmr.stop() << endl;
+				cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 			}
 		}
 
 		// y_(n+1) = yn + dt*(b0*f0 + b5*f5 + b6*f6 + b7*f7 + b8*f8 + b9*f9 + b10*f10) + O(dt^8)
 		// f.d_yout = y_(n+1)
+#ifdef TIMER
+		cout << "call_calc_y_np1_kernel start at " << tmr.start() << endl;
+#endif
 		call_calc_y_np1_kernel();
+#ifdef TIMER
+		cout << "            ... stop at " << tmr.stop() << endl;
+		cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 		if (adaptive) {
 
+#ifdef TIMER
+			cout << "call_calc_yscale_kernel start at " << tmr.start() << endl;
+#endif
 			call_calc_yscale_kernel();
+#ifdef TIMER
+			cout << "            ... stop at " << tmr.stop() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 
 			// Calculate f11 = f(tn + c11 * dt, yn + ...) = d_f[][11]
 			// Calculate f12 = f(tn + c11 * dt, yn + ...) = d_f[][11]
 			for (r = 11; r < r_max; r++) {
 				ttemp = f.t + c[r] * dt_try;
+#ifdef TIMER
+				cout << "call_calc_ytemp_for_fr_kernel start at " << tmr.start() << endl;
+#endif
 				call_calc_ytemp_for_fr_kernel(r);
+#ifdef TIMER
+				cout << "            ... stop at " << tmr.stop() << endl;
+				cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 				for (int i = 0; i < forder; i++) {
+#ifdef TIMER
+					cout << "f.calculate_dy start at " << tmr.start() << endl;
+#endif
 					f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]);
+#ifdef TIMER
+					cout << "            ... stop at " << tmr.stop() << endl;
+					cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 				}
 			}
 			// calculate: d_err = (f0 + f10 - f11 - f12)
 			//call_calc_error_kernel();
 			//max_err = fabs(41.0/840 * dt_try * std::max(max_vec(d_err[0]), max_vec(d_err[1])));
 			//dt_try *= 0.9 * pow(tolerance / max_err, 1.0/8.0);
+#ifdef TIMER
+			cout << "call_calc_scalederror_kernel start at " << tmr.start() << endl;
+#endif
 			call_calc_scalederror_kernel();
-			max_err = fabs(std::max(max_vec(d_err[0]), max_vec(d_err[1]))) / tolerance;
+#ifdef TIMER
+			cout << "            ... stop at " << tmr.stop() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
+			//max_err = fabs(std::max(max_vec(d_err[0]), max_vec(d_err[1]))) / tolerance;
+
+#ifdef TIMER
+			cout << "thrust::max_element start at " << tmr.start() << endl;
+#endif
+			var_t max_1 = *thrust::max_element(d_err[0].begin(), d_err[0].end()) / tolerance;
+#ifdef TIMER
+			cout << "            ... stop at " << tmr.stop() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
+#ifdef TIMER
+			cout << "thrust::max_element start at " << tmr.start() << endl;
+#endif
+			var_t max_2 = *thrust::max_element(d_err[1].begin(), d_err[1].end()) / tolerance;
+#ifdef TIMER
+			cout << "            ... stop at " << tmr.stop() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
+			max_err = fabs(std::max(max_1, max_2));
+
 			// The step failed, the required accuracy was not reached
 			if (max_err > 1.0) {
 				ttt_t dt_temp = SAFETY * dt_try * pow(max_err, PSHRNK);
@@ -527,12 +611,6 @@ ttt_t rkf7::step()
 			}
 		}
 		iter++;
-		// Implement a minimum step-size kriterion and accept the current approximation
-		if (240.0 > dt_try)
-		{
-			dt_try = 250.0;
-			break;
-		}
 	} while (adaptive && max_err > 1.0);
 	n_failed_step += (iter - 1);
 	n_step++;

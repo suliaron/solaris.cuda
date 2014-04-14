@@ -135,8 +135,10 @@ int main(int argc, const char** argv)
 			//positionsf = new ofstream(get_printout_file(opt, pcount++).c_str());
 			string filename = get_filename_without_ext(opt.filename) + '.' + intgr->get_name() + '.' + (opt.gasDisk == 0 ? "" : "gas.CONSTANT.");
 			string filenameWithExt = filename + get_extension(opt.filename);
-			char *path = (char*)combine_path(opt.printoutDir, filenameWithExt).c_str();
-			positionsf = new ofstream(path, std::ios::app);
+			string path = combine_path(opt.printoutDir, filenameWithExt);
+			//char *c_path = new char[path.length() + 1];
+			//strcpy(c_path, path.c_str());
+			positionsf = new ofstream(path.c_str(), ios::app);
 			//filenameWithExt = filename + "oe." + get_extension(opt.filename);
 			//orbelemf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
 		}
@@ -154,6 +156,9 @@ int main(int argc, const char** argv)
 					cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
 					cerr << setprecision(5) << setw(6) << ((ppd->t - opt.timeStart)/opt.timeStop*100) << " %" << endl;
 				}
+				var_t avg_dt = (ppd->t - opt.timeStart) / intgr->get_n_step();
+				cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
+				cerr << setprecision(5) << setw(6) << ((ppd->t - opt.timeStart)/opt.timeStop*100) << " %" << endl;
 
 				if (0 <= pp && pp <= opt.printoutLength) {
 					if (ps >= opt.printoutStep) {
@@ -162,8 +167,8 @@ int main(int argc, const char** argv)
 
 					if (ps == 0) {
 						// Print out positions
-						ppd->copy_to_host();
-						ppd->print_positions(*positionsf);
+						//ppd->copy_to_host();
+						//ppd->print_positions(*positionsf);
 						//pp_disk::h_orbelem_t orbelem = ppd->calculate_orbelem(0);
 						//ppd->print_orbelem(*orbelemf);
 					}

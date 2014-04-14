@@ -3,6 +3,9 @@
 
 #include "config.h"
 #include "ode.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 class integrator
 {
@@ -14,6 +17,10 @@ protected:
 
 	int_t n_failed_step;
 	int_t n_step;
+
+#ifdef TIMER
+	timer	tmr;
+#endif
 
 public:
 	integrator(ode& f, ttt_t dt);

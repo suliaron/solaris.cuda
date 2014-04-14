@@ -200,10 +200,6 @@ void rkn76::call_calc_ytemp_for_fr_kernel(int r)
 		var_t* f5 = d_f[i][4].data().get();
 		var_t* f6 = d_f[i][5].data().get();
 		var_t* f7 = d_f[i][6].data().get();
-		var_t* f8;
-		if (adaptive) {
-			f8 = d_f[i][7].data().get();
-		}
 		switch (r) {
 		case 1:
 			idx = 0;		

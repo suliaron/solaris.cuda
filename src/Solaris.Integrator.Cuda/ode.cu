@@ -23,7 +23,7 @@ void ode::copy_to_host()
 	thrust::copy(d_p.begin(), d_p.end(), h_p.begin());
 
 	// Copy variables to the host
-	for (int i = 0; i < h_y.size(); i++)
+	for (unsigned int i = 0; i < h_y.size(); i++)
 	{
 		thrust::copy(d_y[i].begin(), d_y[i].end(), h_y[i].begin());
 	}
@@ -36,7 +36,7 @@ void ode::copy_to_device()
 	thrust::copy(h_p.begin(), h_p.end(), d_p.begin());
 
 	// Copy variables to the device
-	for (int i = 0; i < h_y.size(); i++)
+	for (unsigned int i = 0; i < h_y.size(); i++)
 	{
 		d_y[i].resize(h_y[i].size());
 		thrust::copy(h_y[i].begin(), h_y[i].end(), d_y[i].begin());
@@ -48,7 +48,7 @@ void ode::copy_to_device()
 void ode::swap_in_out()
 {
 	// Swap values
-	for (int i = 0; i < d_y.size(); i ++)
+	for (unsigned int i = 0; i < d_y.size(); i ++)
 	{
 		d_yout[i].swap(d_y[i]);
 	}
