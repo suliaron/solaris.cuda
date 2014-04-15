@@ -13,4 +13,12 @@
   <ItemGroup>
     <ClCompile Include="unit_test.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="helper_cuda.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="helper_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

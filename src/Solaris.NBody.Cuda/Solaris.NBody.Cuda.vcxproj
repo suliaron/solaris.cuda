@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\config\config.h" />
     <ClInclude Include="..\..\config\constants.h" />
+    <ClInclude Include="..\Solaris.Integrator.Cuda\timer.h" />
     <ClInclude Include="gas_disk.h" />
     <ClInclude Include="interaction_bound.h" />
     <ClInclude Include="pp_disk.h" />
@@ -109,7 +110,8 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\config;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)config;$(SolutionDir)src\Solaris.Integrator.Cuda;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>TIMER;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -123,6 +125,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaLink>
       <AdditionalDependencies>solintcu.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </CudaLink>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>

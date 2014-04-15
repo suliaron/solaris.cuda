@@ -89,9 +89,4 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="event_timer.cuh">
-      <Filter>Header Files</Filter>
-    </None>
-  </ItemGroup>
 </Project>

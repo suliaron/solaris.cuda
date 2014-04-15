@@ -5,6 +5,9 @@
 #include "config.h"
 #include "interaction_bound.h"
 #include "ode.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 class number_of_bodies;
 class gas_disk;
@@ -99,8 +102,10 @@ public:
 	*/
 	void calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce);
 
-// TODO: change back to private
-//private:
+private:
+#ifdef TIMER
+	timer	tmr;
+#endif
 	dim3	grid;
 	dim3	block;
 

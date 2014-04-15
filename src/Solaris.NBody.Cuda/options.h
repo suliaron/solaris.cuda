@@ -7,6 +7,9 @@
 #include "nbody.h"
 #include "ode.h"
 #include "pp_disk.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 class gas_disk;
 class number_of_bodies;
@@ -47,6 +50,9 @@ public:
 	gas_disk			*gasDisk;
 
 private:
+#ifdef TIMER
+	timer	tmr;
+#endif
 	integrator_type_t inttype;		// Integrator type
 	bool_t adaptive;				// Adaptive step size
 	var_t tolerance;				// Tolerance

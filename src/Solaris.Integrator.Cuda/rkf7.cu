@@ -10,9 +10,6 @@
 #include "integrator_exception.h"
 #include "rkf7.h"
 #include "util.h"
-#ifdef TIMER
-#include "timer.h"
-#endif
 
 #define THREADS_PER_BLOCK	256
 
@@ -258,16 +255,41 @@ void calc_y_np1_kernel(int_t n, var_t *y_np1, ttt_t dt, const var_t *y_n, const 
 }
 
 
-void rkf7::calculate_grid(int nData, int threads_per_block)
+
+
+
+rkf7::rkf7(ode& f, ttt_t dt, bool adaptive, var_t tolerance) :
+		integrator(f, dt),
+		adaptive(adaptive),
+		tolerance(tolerance),
+		d_f(f.get_order()),
+		d_ytemp(f.get_order(), d_var_t()),
+		d_err(f.get_order(), d_var_t()),
+		d_yscale(f.get_order(), d_var_t())
 {
-	int	nThread = std::min(threads_per_block, nData);
-	int	nBlock = (nData + nThread - 1)/nThread;
-	grid.x  = nBlock;
-	block.x = nThread;
+	RKOrder = 7;
+	r_max = adaptive ? RKOrder + 6 : RKOrder + 4;
+	int	forder = f.get_order();
+
+	for (int i = 0; i < forder; i++) {
+		d_ytemp[i].resize(f.d_y[i].size());
+		if (adaptive) {
+			d_err[i].resize(f.d_y[i].size());
+			d_yscale[i].resize(f.d_y[i].size());
+		}
+		d_f[i].resize(r_max);
+		for (int r = 0; r < r_max; r++) {
+			d_f[i][r].resize(f.d_y[i].size());
+		}
+	}
 }
 
 void rkf7::call_calc_ytemp_for_fr_kernel(int r)
 {
+#ifdef TIMER
+	cout << "call_calc_ytemp_for_fr_kernel start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	int idx = 0;
 
 	for (int i = 0; i < f.get_order(); i++) {
@@ -354,10 +376,19 @@ void rkf7::call_calc_ytemp_for_fr_kernel(int r)
 			throw integrator_exception(msg.str());
 		}
 	}
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
 
 void rkf7::call_calc_yscale_kernel()
 {
+#ifdef TIMER
+	cout << "call_calc_yscale_kernel start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	for (int i = 0; i < f.get_order(); i++) {
 		int n = f.d_y[i].size();
 		var_t *yscale= d_yscale[i].data().get();
@@ -371,10 +402,19 @@ void rkf7::call_calc_yscale_kernel()
 			throw integrator_exception("calc_yscale_kernel failed");
 		}
 	}
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
 
 void rkf7::call_calc_error_kernel()
 {
+#ifdef TIMER
+	cout << "call_calc_error_kernel start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	for (int i = 0; i < f.get_order(); i++) {
 		int n = f.d_y[i].size();
 		var_t *err = d_err[i].data().get();
@@ -390,10 +430,19 @@ void rkf7::call_calc_error_kernel()
 			throw integrator_exception("calc_error_kernel failed");
 		}
 	}
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
 
 void rkf7::call_calc_scalederror_kernel()
 {
+#ifdef TIMER
+	cout << "call_calc_scalederror_kernel start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	for (int i = 0; i < f.get_order(); i++) {
 		int n = f.d_y[i].size();
 		var_t *err = d_err[i].data().get();
@@ -410,19 +459,19 @@ void rkf7::call_calc_scalederror_kernel()
 			throw integrator_exception("calc_scalederror_kernel failed");
 		}
 	}
-
-	h_var_t h_err = d_err[0];
-	var_t max_1 = *thrust::max_element(h_err.begin(), h_err.end());
-	h_err = d_err[1];
-	var_t max_2 = *thrust::max_element(h_err.begin(), h_err.end());
-
-	cout << "max_1: " << max_1 << endl;
-	cout << "max_2: " << max_2 << endl;
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
-
 
 void rkf7::call_calc_y_np1_kernel()
 {
+#ifdef TIMER
+	cout << "call_calc_y_np1_kernel start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	for (int i = 0; i < f.get_order(); i++) {
 		int n = f.d_y[i].size();
 		var_t *y_n   = f.d_y[i].data().get();
@@ -442,33 +491,19 @@ void rkf7::call_calc_y_np1_kernel()
 			throw integrator_exception("calc_y_np1_kernel failed");
 		}
 	}
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
 
-
-rkf7::rkf7(ode& f, ttt_t dt, bool adaptive, var_t tolerance) :
-		integrator(f, dt),
-		adaptive(adaptive),
-		tolerance(tolerance),
-		d_f(f.get_order()),
-		d_ytemp(f.get_order(), d_var_t()),
-		d_err(f.get_order(), d_var_t()),
-		d_yscale(f.get_order(), d_var_t())
+void rkf7::calculate_grid(int nData, int threads_per_block)
 {
-	RKOrder = 7;
-	r_max = adaptive ? RKOrder + 6 : RKOrder + 4;
-	int	forder = f.get_order();
-
-	for (int i = 0; i < forder; i++) {
-		d_ytemp[i].resize(f.d_y[i].size());
-		if (adaptive) {
-			d_err[i].resize(f.d_y[i].size());
-			d_yscale[i].resize(f.d_y[i].size());
-		}
-		d_f[i].resize(r_max);
-		for (int r = 0; r < r_max; r++) {
-			d_f[i][r].resize(f.d_y[i].size());
-		}
-	}
+	int	nThread = std::min(threads_per_block, nData);
+	int	nBlock = (nData + nThread - 1)/nThread;
+	grid.x  = nBlock;
+	block.x = nThread;
 }
 
 // constants for the Runge-Kutta-Fehlberg7(8) integrator
@@ -484,16 +519,7 @@ ttt_t rkf7::step()
 	// Calculate f0 = f(tn, yn) = d_f[][0]
 	ttt_t ttemp = f.t + c[r] * dt;
 	for (int i = 0; i < forder; i++) {
-#ifdef TIMER
-		cout << "f.calculate_dy start at " << tmr.start() << endl;
-		tmr.cuda_start();
-#endif
 		f.calculate_dy(i, r, ttemp, f.d_p, f.d_y, d_f[i][r]);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << "            ... stop at " << tmr.stop() << endl;
-		cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 	}
 
 	dt_try = dt;
@@ -506,99 +532,50 @@ ttt_t rkf7::step()
 		// Calculate f10 = f(tn + c10 * dt, yn + a10,0 * dt * f0 + ...) = d_f[][10]
 		for (r = 1; r <= 10; r++) {
 			ttemp = f.t + c[r] * dt_try;
-#ifdef TIMER
-			cout << "call_calc_ytemp_for_fr_kernel start at " << tmr.start() << endl;
-#endif
 			call_calc_ytemp_for_fr_kernel(r);
-#ifdef TIMER
-			cout << "            ... stop at " << tmr.stop() << endl;
-			cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 			for (int i = 0; i < forder; i++) {
-#ifdef TIMER
-				cout << "f.calculate_dy start at " << tmr.start() << endl;
-#endif
 				f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]);
-#ifdef TIMER
-				cout << "            ... stop at " << tmr.stop() << endl;
-				cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 			}
 		}
 
 		// y_(n+1) = yn + dt*(b0*f0 + b5*f5 + b6*f6 + b7*f7 + b8*f8 + b9*f9 + b10*f10) + O(dt^8)
 		// f.d_yout = y_(n+1)
-#ifdef TIMER
-		cout << "call_calc_y_np1_kernel start at " << tmr.start() << endl;
-#endif
 		call_calc_y_np1_kernel();
-#ifdef TIMER
-		cout << "            ... stop at " << tmr.stop() << endl;
-		cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 		if (adaptive) {
-
-#ifdef TIMER
-			cout << "call_calc_yscale_kernel start at " << tmr.start() << endl;
-#endif
 			call_calc_yscale_kernel();
-#ifdef TIMER
-			cout << "            ... stop at " << tmr.stop() << endl;
-			cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
-
 			// Calculate f11 = f(tn + c11 * dt, yn + ...) = d_f[][11]
 			// Calculate f12 = f(tn + c11 * dt, yn + ...) = d_f[][11]
 			for (r = 11; r < r_max; r++) {
 				ttemp = f.t + c[r] * dt_try;
-#ifdef TIMER
-				cout << "call_calc_ytemp_for_fr_kernel start at " << tmr.start() << endl;
-#endif
 				call_calc_ytemp_for_fr_kernel(r);
-#ifdef TIMER
-				cout << "            ... stop at " << tmr.stop() << endl;
-				cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 				for (int i = 0; i < forder; i++) {
-#ifdef TIMER
-					cout << "f.calculate_dy start at " << tmr.start() << endl;
-#endif
 					f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]);
-#ifdef TIMER
-					cout << "            ... stop at " << tmr.stop() << endl;
-					cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 				}
 			}
 			// calculate: d_err = (f0 + f10 - f11 - f12)
 			//call_calc_error_kernel();
 			//max_err = fabs(41.0/840 * dt_try * std::max(max_vec(d_err[0]), max_vec(d_err[1])));
 			//dt_try *= 0.9 * pow(tolerance / max_err, 1.0/8.0);
-#ifdef TIMER
-			cout << "call_calc_scalederror_kernel start at " << tmr.start() << endl;
-#endif
 			call_calc_scalederror_kernel();
-#ifdef TIMER
-			cout << "            ... stop at " << tmr.stop() << endl;
-			cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 			//max_err = fabs(std::max(max_vec(d_err[0]), max_vec(d_err[1]))) / tolerance;
 
 #ifdef TIMER
 			cout << "thrust::max_element start at " << tmr.start() << endl;
+			tmr.cuda_start();
 #endif
 			var_t max_1 = *thrust::max_element(d_err[0].begin(), d_err[0].end()) / tolerance;
 #ifdef TIMER
 			cout << "            ... stop at " << tmr.stop() << endl;
-			cout << "Took: " << tmr.ellapsed_time() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
 #endif
 #ifdef TIMER
 			cout << "thrust::max_element start at " << tmr.start() << endl;
+			tmr.cuda_start();
 #endif
 			var_t max_2 = *thrust::max_element(d_err[1].begin(), d_err[1].end()) / tolerance;
 #ifdef TIMER
 			cout << "            ... stop at " << tmr.stop() << endl;
-			cout << "Took: " << tmr.ellapsed_time() << endl;
+			cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
 #endif
 			max_err = fabs(std::max(max_1, max_2));
 

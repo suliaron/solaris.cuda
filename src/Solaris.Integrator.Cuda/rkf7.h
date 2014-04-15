@@ -4,6 +4,9 @@
 #include "config.h"
 #include "integrator.h"
 #include "ode.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 class rkf7 : public integrator
 {
@@ -14,6 +17,9 @@ public:
 	static ttt_t c[];
 
 private:
+#ifdef TIMER
+	timer	tmr;
+#endif
 	//! The order of the embedded RK formulae
 	int		RKOrder;
 	//! The maximum number of the force calculation

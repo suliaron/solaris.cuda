@@ -19,6 +19,7 @@ public:
 	gas_disk();
 	gas_disk(var2_t rho, var2_t sch, var2_t eta, var2_t tau, gas_decrease_t gas_decrease, ttt_t t0, ttt_t t1, ttt_t e_folding_time, var_t m_star);
 
+	__host__ __device__ 
 	var_t	reduction_factor(ttt_t time);
 
 	//! Time when the decrease of gas starts (for linear and exponential)

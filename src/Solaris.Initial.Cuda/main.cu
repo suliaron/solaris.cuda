@@ -316,7 +316,7 @@ int generate_nbody_Rezso(string filename, int n)
 	output << vVec.x << sep << vVec.y << sep << vVec.z << sep;
 	output << endl;
 
-	srand (time(0));
+	srand ((unsigned int)time(0));
 	// Output planets
 	for (int i = 2; i < n; i ++)
 	{
@@ -367,7 +367,7 @@ int generate_nbody2(string filename, int n)
 	output << 0.0 << sep << 0.0 << sep << 0.0;
 	output << endl;
 
-	srand (time(0));
+	srand ((unsigned int)time(0));
 	orbelem oe;
 	vec_t	rVec, vVec;
 	// Output planets
@@ -436,7 +436,7 @@ int generate_Rezso_disk(string path, var2_t disk, number_of_bodies *nBodies)
 	param0.migStopAt = 0.0;
 	print_body_record(output, bodyId, t, &param0, &rVec, &vVec);
 
-	srand (time(0));
+	srand ((unsigned int)time(0));
 	orbelem oe;
 
 	// Output giant planets
@@ -631,7 +631,7 @@ int generate_pp_disk(string path, var2_t disk, number_of_bodies *nBodies)
 		print_body_record(output, bodyId, t, &param0, &rVec, &vVec);
 	}
 
-	srand (time(0));
+	srand ((unsigned int)time(0));
 	orbelem oe;
 	// Output giant planets
 	for (int i = 0; i < nBodies->giant_planet; i++, bodyId++)
@@ -899,7 +899,7 @@ int main(int argc, const char **argv)
 	}
 	string nbstr = create_number_of_bodies_str(nBodies);
 
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 
 	//var2_t disk = {5.0, 6.0};	// AU
 	//retCode = generate_pp_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);

@@ -49,9 +49,6 @@
     <ClCompile Include="integrator.cpp" />
     <ClCompile Include="integrator_exception.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="event_timer.cuh" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B72C111A-68EC-41F8-8E06-F3A11B017802}</ProjectGuid>
     <RootNamespace>Solaris.Integrator.Cuda</RootNamespace>
@@ -116,7 +113,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\config;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)config;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TIMER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>

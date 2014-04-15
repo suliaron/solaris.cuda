@@ -36,6 +36,9 @@
     <ClInclude Include="..\..\config\constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Solaris.Integrator.Cuda\timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="nbody.cu">

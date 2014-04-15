@@ -329,7 +329,16 @@ pp_disk*	options::create_pp_disk()
 	}
 	ppd->transform_to_bc();
 
+#ifdef TIMER
+	cout << "copy_to_device start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	ppd->copy_to_device();
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 
 	return ppd;
 }

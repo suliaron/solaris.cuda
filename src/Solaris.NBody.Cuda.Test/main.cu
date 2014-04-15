@@ -42,9 +42,6 @@ using namespace std;
 
 // Shared Utilities (QA Testing)
 
-int *pArgc = NULL;
-char **pArgv = NULL;
-
 // This function wraps the CUDA Driver API into a template function
 template <class T>
 inline void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, int device)
@@ -81,11 +78,8 @@ inline bool IsAppBuiltAs64()
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
-int device_query(int argc, char **argv)
+int device_query(int argc, const char **argv)
 {
-    pArgc = &argc;
-    pArgv = argv;
-
     printf("%s Starting...\n\n", argv[0]);
     printf(" CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
 
@@ -350,9 +344,10 @@ static string get_printout_file(options& opt, int pcount)
 
 int main(int argc, const char** argv)
 {
-	cudaDeviceReset();
-
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
+
+	cudaDeviceReset();
+	device_query(argc, argv);
 
 	time_t start = time(NULL);
 

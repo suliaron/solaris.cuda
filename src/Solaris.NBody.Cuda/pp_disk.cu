@@ -20,6 +20,9 @@
 #include "nbody_exception.h"
 #include "number_of_bodies.h"
 #include "pp_disk.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 using namespace std;
 
@@ -810,6 +813,10 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 {
 	cudaError_t cudaStatus = cudaSuccess;
 
+#ifdef TIMER
+	cout << "calculate_dy start at " << tmr.start() << endl;
+	tmr.cuda_start();
+#endif
 	switch (i)
 	{
 	case 0:
@@ -859,6 +866,11 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 
 		break;
 	}
+#ifdef TIMER
+	tmr.cuda_stop();
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 }
 
 pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
@@ -948,6 +960,9 @@ void pp_disk::transform_to_bc()
 
 void pp_disk::load(string filename, int n)
 {
+#ifdef TIMER
+	cout << "ppd_disk::load start at " << tmr.start() << endl;
+#endif
 	cout << "Loading position started";
 
 	vec_t* coor = (vec_t*)h_y[0].data();
@@ -988,6 +1003,10 @@ void pp_disk::load(string filename, int n)
 	else {
 		throw nbody_exception("Cannot open file.");
 	}
+#ifdef TIMER
+	cout << "            ... stop at " << tmr.stop() << endl;
+	cout << "Took: " << tmr.ellapsed_time() << endl;
+#endif
 
 	cout << " ... finished" << endl;
 }
