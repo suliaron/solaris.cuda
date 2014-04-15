@@ -77,6 +77,9 @@
     <CudaCompile Include="rkf7.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="timer.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="integrator.cpp">
@@ -85,8 +88,10 @@
     <ClCompile Include="integrator_exception.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="timer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="event_timer.cuh">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

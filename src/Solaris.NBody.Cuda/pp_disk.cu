@@ -924,6 +924,8 @@ void	pp_disk::compute_bc(var_t M0, vec_t* R0, vec_t* V0)
 
 void pp_disk::transform_to_bc()
 {
+	cout << "Transform to barycentric system started";
+
 	vec_t* coor = (vec_t*)h_y[0].data();
 	vec_t* velo = (vec_t*)h_y[1].data();
 
@@ -940,10 +942,14 @@ void pp_disk::transform_to_bc()
 		coor[j].x -= R0.x;		coor[j].y -= R0.y;		coor[j].z -= R0.z;
 		velo[j].x -= V0.x;		velo[j].y -= V0.y;		velo[j].z -= V0.z;
 	}
+
+	cout << " ... finished" << endl;
 }
 
 void pp_disk::load(string filename, int n)
 {
+	cout << "Loading position started";
+
 	vec_t* coor = (vec_t*)h_y[0].data();
 	vec_t* velo = (vec_t*)h_y[1].data();
 	param_t* param = (param_t*)h_p.data();
@@ -982,11 +988,15 @@ void pp_disk::load(string filename, int n)
 	else {
 		throw nbody_exception("Cannot open file.");
 	}
+
+	cout << " ... finished" << endl;
 }
 
 // Print body positions
 int pp_disk::print_positions(ostream& sout)
 {
+	cout << "Printing position started";
+
 	param_t* h_param = (param_t*)h_p.data();
 	vec_t* h_coord = (vec_t*)h_y[0].data();
 	vec_t* h_veloc = (vec_t*)h_y[1].data();
@@ -1008,12 +1018,16 @@ int pp_disk::print_positions(ostream& sout)
 		sout << endl;
 	}
 
+	cout << " ... finished" << endl;
+
 	return 0;
 }
 
 // Print body orbital elements
 int pp_disk::print_orbelem(ostream& sout)
 {
+	cout << "Printing orbital elements started";
+
 	param_t *h_param = (param_t*)h_p.data();
 	orbelem_t *oe	 = (orbelem_t*)h_orbelem.data();
 	
@@ -1033,6 +1047,8 @@ int pp_disk::print_orbelem(ostream& sout)
 
 		sout << endl;
 	}
+
+	cout << " ... finished" << endl;
 
 	return 0;
 }

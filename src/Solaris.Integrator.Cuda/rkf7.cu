@@ -486,11 +486,13 @@ ttt_t rkf7::step()
 	for (int i = 0; i < forder; i++) {
 #ifdef TIMER
 		cout << "f.calculate_dy start at " << tmr.start() << endl;
+		tmr.cuda_start();
 #endif
 		f.calculate_dy(i, r, ttemp, f.d_p, f.d_y, d_f[i][r]);
 #ifdef TIMER
+		tmr.cuda_stop();
 		cout << "            ... stop at " << tmr.stop() << endl;
-		cout << "Took: " << tmr.ellapsed_time() << endl;
+		cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
 #endif
 	}
 

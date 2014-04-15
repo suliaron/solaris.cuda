@@ -1,15 +1,22 @@
+// include system
 #include <Windows.h>
 
+// include project
 #include "timer.h"
 
 timer::timer() :
 	_start(0),
 	_stop(0)
 {
+	cudaEventCreate(&_cuda_start);
+	cudaEventCreate(&_cuda_stop);
 }
 
 timer::~timer()
-{}
+{
+	cudaEventDestroy(_cuda_start);
+	cudaEventDestroy(_cuda_stop);
+}
 
 int64_t timer::start()
 {
@@ -33,6 +40,25 @@ int64_t timer::ellapsed_time()
 {
 	return (_stop - _start);
 }
+
+void timer::cuda_start()
+{
+	cudaEventRecord(_cuda_start, 0);
+}
+
+void timer::cuda_stop()
+{
+	cudaEventRecord(_cuda_stop, 0);
+	cudaEventSynchronize(_cuda_stop);
+}
+
+float timer::cuda_ellapsed_time()
+{
+	float elapsed = 0.f;
+	cudaEventElapsedTime(&elapsed, _cuda_start, _cuda_stop);
+	return elapsed;
+}
+
 
 int64_t timer::GetTimeMicro64()
 {

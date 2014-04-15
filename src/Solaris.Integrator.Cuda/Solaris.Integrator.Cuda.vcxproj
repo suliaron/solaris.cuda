@@ -42,12 +42,15 @@
     <CudaCompile Include="rkn76.cu" />
     <CudaCompile Include="rungekutta.cu" />
     <CudaCompile Include="rungekuttanystrom.cu" />
+    <CudaCompile Include="timer.cu" />
     <CudaCompile Include="util.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="integrator.cpp" />
     <ClCompile Include="integrator_exception.cpp" />
-    <ClCompile Include="timer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="event_timer.cuh" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B72C111A-68EC-41F8-8E06-F3A11B017802}</ProjectGuid>
