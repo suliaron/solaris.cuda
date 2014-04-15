@@ -125,10 +125,7 @@ int device_query(int argc, char **argv)
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, (driverVersion%100)/10, runtimeVersion/1000, (runtimeVersion%100)/10);
         printf("  CUDA Capability Major/Minor version number:    %d.%d\n", deviceProp.major, deviceProp.minor);
 
-        char msg[256];
-        SPRINTF(msg, "  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n",
-                (float)deviceProp.totalGlobalMem/1048576.0f, (unsigned long long) deviceProp.totalGlobalMem);
-        printf("%s", msg);
+        printf("  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n", (float)deviceProp.totalGlobalMem/1048576.0f, (unsigned long long) deviceProp.totalGlobalMem);
 
         printf("  (%2d) Multiprocessors, (%3d) CUDA Cores/MP:     %d CUDA Cores\n",
                deviceProp.multiProcessorCount,
@@ -213,59 +210,6 @@ int device_query(int argc, char **argv)
         printf("     < %s >\n", sComputeMode[deviceProp.computeMode]);
     }
 
-    // If there are 2 or more GPUs, query to determine whether RDMA is supported
-    if (deviceCount >= 2)
-    {
-        cudaDeviceProp prop[64];
-        int gpuid[64]; // we want to find the first two GPU's that can support P2P
-        int gpu_p2p_count = 0;
-
-        for (int i=0; i < deviceCount; i++)
-        {
-            checkCudaErrors(cudaGetDeviceProperties(&prop[i], i));
-
-            // Only boards based on Fermi or later can support P2P
-            if ((prop[i].major >= 2)
-#ifdef _WIN32
-                // on Windows (64-bit), the Tesla Compute Cluster driver for windows must be enabled to supprot this
-                && prop[i].tccDriver
-#endif
-               )
-            {
-                // This is an array of P2P capable GPUs
-                gpuid[gpu_p2p_count++] = i;
-            }
-        }
-
-        // Show all the combinations of support P2P GPUs
-        int can_access_peer_0_1, can_access_peer_1_0;
-
-        if (gpu_p2p_count >= 2)
-        {
-            for (int i = 0; i < gpu_p2p_count-1; i++)
-            {
-                for (int j = 1; j < gpu_p2p_count; j++)
-                {
-                    checkCudaErrors(cudaDeviceCanAccessPeer(&can_access_peer_0_1, gpuid[i], gpuid[j]));
-                    printf("> Peer access from %s (GPU%d) -> %s (GPU%d) : %s\n", prop[gpuid[i]].name, gpuid[i],
-                           prop[gpuid[j]].name, gpuid[j] ,
-                           can_access_peer_0_1 ? "Yes" : "No");
-                }
-            }
-
-            for (int j = 1; j < gpu_p2p_count; j++)
-            {
-                for (int i = 0; i < gpu_p2p_count-1; i++)
-                {
-                    checkCudaErrors(cudaDeviceCanAccessPeer(&can_access_peer_1_0, gpuid[j], gpuid[i]));
-                    printf("> Peer access from %s (GPU%d) -> %s (GPU%d) : %s\n", prop[gpuid[j]].name, gpuid[j],
-                           prop[gpuid[i]].name, gpuid[i] ,
-                           can_access_peer_1_0 ? "Yes" : "No");
-                }
-            }
-        }
-    }
-
     // csv masterlog info
     // *****************************
     // exe and CUDA driver name
@@ -320,7 +264,7 @@ int device_query(int argc, char **argv)
 	printf("Result = PASS\n");
 
     // finish
-    exit(EXIT_SUCCESS);
+    return (EXIT_SUCCESS);
 }
 
 
