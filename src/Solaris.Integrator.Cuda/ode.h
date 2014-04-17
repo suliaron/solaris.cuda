@@ -4,9 +4,16 @@
 #include <thrust/device_vector.h>
 
 #include "config.h"
+#ifdef TIMER
+#include "timer.h"
+#endif
 
 class ode
 {
+protected:
+#ifdef TIMER
+	timer	tmr;
+#endif
 public:
 	//! Current time
 	ttt_t t;

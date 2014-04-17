@@ -1,4 +1,5 @@
 // includes system 
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 
@@ -683,6 +684,9 @@ void pp_disk::allocate_vectors()
 			acceMigrateII.resize(ndim * nBodies->giant_planet);
 		}
 	}
+
+	int_t	size0 = h_y[0].size();
+	int_t	size1 = h_y[1].size();
 }
 
 void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce)
@@ -707,6 +711,9 @@ void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* para
 
 cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, const vec_t *coor, vec_t *acce)
 {
+#ifdef TIMER
+	timer tmr;
+#endif
 	cudaError_t cudaStatus = cudaSuccess;
 
 	int		nBodyToCalculate;
@@ -721,7 +728,14 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
+#ifdef TIMER
+		tmr.cuda_start();
+#endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+#ifdef TIMER
+		tmr.cuda_stop();
+		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("calculate_grav_accel_kernel failed", cudaStatus);
@@ -736,7 +750,14 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
+#ifdef TIMER
+		tmr.cuda_start();
+#endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+#ifdef TIMER
+		tmr.cuda_stop();
+		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("calculate_grav_accel_kernel failed", cudaStatus);
@@ -751,7 +772,14 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
+#ifdef TIMER
+		tmr.cuda_start();
+#endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+#ifdef TIMER
+		tmr.cuda_stop();
+		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("calculate_grav_accel_kernel failed", cudaStatus);
@@ -814,7 +842,6 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 	cudaError_t cudaStatus = cudaSuccess;
 
 #ifdef TIMER
-	cout << "calculate_dy start at " << tmr.start() << endl;
 	tmr.cuda_start();
 #endif
 	switch (i)
@@ -868,8 +895,7 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 	}
 #ifdef TIMER
 	tmr.cuda_stop();
-	cout << "            ... stop at " << tmr.stop() << endl;
-	cout << "Took: " << tmr.ellapsed_time() << "\t" << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+	cout << setw(50) << "calculate_dy() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
 #endif
 }
 

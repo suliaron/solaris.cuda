@@ -1,6 +1,6 @@
 // includes, system 
 #include <ctime>
-//#include <cstdint>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -51,41 +51,37 @@ static cudaError_t HandleError(cudaError_t cudaStatus, const char *file, int lin
 /* Returns the amount of microseconds (10^-6) elapsed since the UNIX epoch. Works on both
  * windows and linux. */
 
-typedef long int64_t;
-
-int64_t GetTimeMicro64()
+uint64_t GetTimeMicro64()
 {
-//#ifdef WIN32
-//	/* Windows */
-//	FILETIME ft;
-//	LARGE_INTEGER li;
-//
-//	/* Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and copy it
-//	* to a LARGE_INTEGER structure. */
-//	GetSystemTimeAsFileTime(&ft);
-//	li.LowPart = ft.dwLowDateTime;
-//	li.HighPart = ft.dwHighDateTime;
-//
-//	uint64_t ret = li.QuadPart;
-//	ret -= 116444736000000000LL; /* Convert from file time to UNIX epoch time. */
-//	ret /= 10; /* From 100 nano seconds (10^-7) to 1 microsecond (10^-6) intervals */
-//
-//	return ret;
-//#else
-//	/* Linux */
-//	struct timeval tv;
-//
-//	gettimeofday(&tv, NULL);
-//
-//	uint64 ret = tv.tv_usec;
-//
-//	/* Adds the seconds (10^0) after converting them to microseconds (10^-6) */
-//	ret += (tv.tv_sec * 1000000);
-//
-//	return ret;
-//#endif
+#ifdef WIN32
+	/* Windows */
+	FILETIME ft;
+	LARGE_INTEGER li;
 
-	return 0;
+	/* Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and copy it
+	* to a LARGE_INTEGER structure. */
+	GetSystemTimeAsFileTime(&ft);
+	li.LowPart = ft.dwLowDateTime;
+	li.HighPart = ft.dwHighDateTime;
+
+	uint64_t ret = li.QuadPart;
+	ret -= 116444736000000000LL; /* Convert from file time to UNIX epoch time. */
+	ret /= 10; /* From 100 nano seconds (10^-7) to 1 microsecond (10^-6) intervals */
+
+	return ret;
+#else
+	/* Linux */
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+
+	uint64 ret = tv.tv_usec;
+
+	/* Adds the seconds (10^0) after converting them to microseconds (10^-6) */
+	ret += (tv.tv_sec * 1000000);
+
+	return ret;
+#endif
 }
 
 string create_number_of_bodies_str(const number_of_bodies *nBodies)
@@ -305,12 +301,11 @@ var_t caclulate_mass(var_t R, var_t density)
 
 int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 {
-	var_t t = 0.0;
 	int_t bodyId = 0;
 
 	pp_disk::param_t* params = (pp_disk::param_t*)ppd->h_p.data();
-	vec_t* coor = (vec_t*)ppd->h_y[0].data();
-	vec_t* velo = (vec_t*)ppd->h_y[1].data();
+	vec_t* coor = (vec_t*)(ppd->h_y[0]).data();
+	vec_t* velo = (vec_t*)(ppd->h_y[1]).data();
 
 	vec_t rVec = {0.0, 0.0, 0.0, 0.0};
 	vec_t vVec = {0.0, 0.0, 0.0, 0.0};
@@ -332,7 +327,7 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		velo[i] = vVec;
 	}
 
-	srand (time(0));
+	srand ((unsigned int)time(0));
 	pp_disk::orbelem_t oe;
 	// Output giant planets
 	for (int i = 0; i < nBodies->giant_planet; i++, bodyId++)
@@ -522,79 +517,55 @@ var_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax)
 {
 	var_t result = 0.0;
 
-	pp_disk ppd = pp_disk(nBodies, 0, 0.0);
-
-	var2_t disk = {5.0, 6.0};	// AU
-	populate_pp_disk(disk, nBodies, &ppd);
+	pp_disk *ppd = new pp_disk(nBodies, 0, 0.0);
 
 	std::vector<var_t> h_acce;
-	h_acce.resize(ppd.h_y[0].size());
+	h_acce.resize(ppd->h_y[0].size());
 
-	pp_disk::param_t* params = (pp_disk::param_t*)ppd.h_p.data();
-	vec_t* coor = (vec_t*)ppd.h_y[0].data();
-	vec_t* velo = (vec_t*)ppd.h_y[1].data();
+	pp_disk::param_t* params = (pp_disk::param_t*)ppd->h_p.data();
+	vec_t* coor = (vec_t*)ppd->h_y[0].data();
+	vec_t* velo = (vec_t*)ppd->h_y[1].data();
 	vec_t* h_a  = (vec_t*)h_acce.data();
 
-	int64_t start = GetTimeMicro64();
+	var2_t disk = {5.0, 6.0};	// AU
+	populate_pp_disk(disk, nBodies, ppd);
+
+	uint64_t start = GetTimeMicro64();
 	for (int i = 0; i < iterMax; i++) {
 		if (0 < nBodies->n_self_interacting()) {
 			interaction_bound iBound = nBodies->get_self_interacting();
-			ppd.calculate_grav_accel(iBound, params, coor, h_a);
+			ppd->calculate_grav_accel(iBound, params, coor, h_a);
 		}
 		if (0 < nBodies->super_planetesimal + nBodies->planetesimal) {
 			interaction_bound iBound	= nBodies->get_nonself_interacting();
-			ppd.calculate_grav_accel(iBound, params, coor, h_a);
+			ppd->calculate_grav_accel(iBound, params, coor, h_a);
 		}
 		if (0 < nBodies->test_particle) {
 			interaction_bound iBound = nBodies->get_non_interacting();
-			ppd.calculate_grav_accel(iBound, params, coor, h_a);
+			ppd->calculate_grav_accel(iBound, params, coor, h_a);
 		}
 	}
 	result = (GetTimeMicro64() - start) / (var_t)iterMax;
+
+	delete ppd;
 
 	return result;
 }
 
 int main(int argc, const char** argv)
 {
-	cudaError_t cudaStatus = cudaSuccess;
-	int		result = 0;
 	char	func_name[256];
-	char	err_msg[1024];
 
 	
 	{
 		strcpy(func_name, "compute_gravity_acceleration");
-		string outDir = "C:\\Work\\Projects\\solaris\\PerformanceTest";
+		string outDir = "C:\\Work\\Projects\\solaris.cuda\\PerformanceTest";
 
 		ofstream data;
-		int_t iterMax = 10000;
+		int_t iterMax = 100;
 		for (int n = 10; n <= 100; n += 10) {
 			for (int i = 1; i <= iterMax; i *= 10) {
 				number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 0);
-				string filename = "gravity_acceleration_on_cpu_nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
-
-				string path = combine_path(outDir, filename);
-				data.open(path.c_str(), std::ofstream::app);
-				if (!data.is_open())
-				{
-					cerr << "Unable to open file: " << path << "!\n";
-					return 0;
-				}
-				if ( i == 1 ) {
-					data << "Execution time in micro seconds on the cpu for " << n << " self interacting bodies:\n";
-				}
-				var_t elapsedTime = compute_gravity_acceleration(nBodies, i);
-				cout << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-				data << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-				data.close();
-			}
-		}
-
-		iterMax = 1000;
-		for (int n = 100; n <= 1000; n += 100) {
-			for (int i = 1; i <= iterMax; i *= 10) {
-				number_of_bodies *nBodies = new number_of_bodies(0, 0, n, 0, 0, 0, 0);
 				string filename = "gravity_acceleration_on_cpu_nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
 
 				string path = combine_path(outDir, filename);

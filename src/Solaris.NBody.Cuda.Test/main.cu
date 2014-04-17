@@ -346,7 +346,7 @@ int main(int argc, const char** argv)
 {
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
 
-	cudaDeviceReset();
+	//cudaDeviceReset();
 	device_query(argc, argv);
 
 	time_t start = time(NULL);
