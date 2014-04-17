@@ -519,6 +519,12 @@ var_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax)
 
 	pp_disk *ppd = new pp_disk(nBodies, 0, 0.0);
 
+	var2_t disk = {5.0, 6.0};	// AU
+	ppd->generate_rand(disk);
+	
+	
+//	populate_pp_disk(disk, nBodies, ppd);
+
 	std::vector<var_t> h_acce;
 	h_acce.resize(ppd->h_y[0].size());
 
@@ -526,9 +532,6 @@ var_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax)
 	vec_t* coor = (vec_t*)ppd->h_y[0].data();
 	vec_t* velo = (vec_t*)ppd->h_y[1].data();
 	vec_t* h_a  = (vec_t*)h_acce.data();
-
-	var2_t disk = {5.0, 6.0};	// AU
-	populate_pp_disk(disk, nBodies, ppd);
 
 	uint64_t start = GetTimeMicro64();
 	for (int i = 0; i < iterMax; i++) {

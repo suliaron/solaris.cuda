@@ -76,6 +76,7 @@ public:
 	void calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy);
 
 	void load(string filename, int n);
+	void generate_rand(var2_t disk);
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);
 

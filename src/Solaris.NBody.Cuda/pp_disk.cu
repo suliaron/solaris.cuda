@@ -39,6 +39,29 @@ static cudaError_t HandleError(cudaError_t cudaStatus, const char *file, int lin
 }
 #define HANDLE_ERROR(cudaStatus) (HandleError(cudaStatus, __FILE__, __LINE__))
 
+static 
+var_t pdf_const(var_t x)
+{
+	return 1;
+}
+
+// Draw a number from a given distribution
+static 
+var_t generate_random(var_t xmin, var_t xmax, var_t p(var_t))
+{
+	var_t x;
+	var_t y;
+
+	do
+	{
+		x = xmin + (var_t)rand() / RAND_MAX * (xmax - xmin);
+		y = (var_t)rand() / RAND_MAX;
+	}
+	while (y > p(x));
+
+	return x;
+}
+
 static __host__ __device__
 void shift_into_range(var_t lower, var_t upper, var_t* value)
 {
@@ -92,6 +115,26 @@ var_t	norm(const vec_t* v)
 {
 	return sqrt(norm2(v));
 }
+
+#define FOUR_PI_OVER_THREE	4.1887902047863909846168578443727
+static __host__ __device__
+var_t calculate_radius(var_t m, var_t density)
+{
+	return pow(1.0/FOUR_PI_OVER_THREE * m/density ,1.0/3.0);
+}
+
+static __host__ __device__
+var_t calculate_density(var_t m, var_t R)
+{
+	return m / (FOUR_PI_OVER_THREE * CUBE(R));
+}
+
+static __host__ __device__
+var_t caclulate_mass(var_t R, var_t density)
+{
+	return FOUR_PI_OVER_THREE * CUBE(R) * density;
+}
+#undef FOUR_PI_OVER_THREE
 
 static __host__ __device__
 vec_t	circular_velocity(var_t mu, const vec_t* rVec)
@@ -685,8 +728,8 @@ void pp_disk::allocate_vectors()
 		}
 	}
 
-	int_t	size0 = h_y[0].size();
-	int_t	size1 = h_y[1].size();
+	//int_t	size0 = h_y[0].size();
+	//int_t	size1 = h_y[1].size();
 }
 
 void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce)
@@ -1035,6 +1078,211 @@ void pp_disk::load(string filename, int n)
 #endif
 
 	cout << " ... finished" << endl;
+}
+
+void pp_disk::generate_rand(var2_t disk)
+{
+	int_t bodyId = 0;
+
+	param_t* params = (param_t*)h_p.data();
+	vec_t* coor = (vec_t*)h_y[0].data();
+	vec_t* velo = (vec_t*)h_y[1].data();
+
+	vec_t rVec = {0.0, 0.0, 0.0, 0.0};
+	vec_t vVec = {0.0, 0.0, 0.0, 0.0};
+	var_t cd;
+	// Output central mass
+	for (int i = 0; i < nBodies->star; i++, bodyId++)
+	{
+		params[i].id = bodyId;
+		params[i].mass = 1.0;
+		params[i].radius = Constants::SolarRadiusToAu;
+		params[i].density = calculate_density(params[i].mass, params[i].radius);
+		cd = 0.0;
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_NO;
+		params[i].migStopAt = 0.0;
+
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	srand ((unsigned int)time(0));
+	pp_disk::orbelem_t oe;
+	// Output giant planets
+	for (int i = 0; i < nBodies->giant_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.1, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].mass = generate_random(0.1, 10.0, pdf_const) * Constants::JupiterToSolar;
+		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		params[i].radius = calculate_radius(params[i].mass, params[i].density);
+		cd = 0.0;
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_TYPE_II;
+		params[i].migStopAt = 1.0;
+
+		var_t mu = K2*(params[0].mass + params[i].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	// Output rocky planets
+	for (int i = 0; i < nBodies->rocky_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.1, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].mass = generate_random(0.1, 10.0, pdf_const) * Constants::EarthToSolar;
+		params[i].density = generate_random(3.0, 5.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		params[i].radius = calculate_radius(params[i].mass, params[i].density);
+		cd = 0.0;
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_TYPE_I;
+		params[i].migStopAt = 0.4;
+
+		var_t mu = K2*(params[0].mass + params[i].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	// Output proto planets
+	for (int i = 0; i < nBodies->proto_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.1, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].mass = generate_random(0.001, 0.1, pdf_const) * Constants::EarthToSolar;
+		params[i].density = generate_random(1.5, 3.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		params[i].radius = calculate_radius(params[i].mass, params[i].density);
+		cd = 0.0;
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_TYPE_I;
+		params[i].migStopAt = 0.4;
+
+		var_t mu = K2*(params[0].mass + params[i].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	// Output super-planetesimals
+	for (int i = 0; i < nBodies->super_planetesimal; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.2, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].mass = generate_random(0.0001, 0.01, pdf_const) * Constants::EarthToSolar;
+		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		params[i].radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
+		cd = generate_random(0.5, 4.0, pdf_const);
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_NO;
+		params[i].migStopAt = 0.0;
+
+		var_t mu = K2*(params[0].mass + params[i].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	// Output planetesimals
+	for (int i = 0; i < nBodies->planetesimal; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.2, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
+		params[i].radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
+		params[i].mass = caclulate_mass(params[i].radius, params[i].density);
+		cd = generate_random(0.5, 4.0, pdf_const);
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_NO;
+		params[i].migStopAt = 0.0;
+
+		var_t mu = K2*(params[0].mass + params[i].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
+
+	// Output test particles
+	for (int i = 0; i < nBodies->test_particle; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.2, pdf_const);
+		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		params[i].id = bodyId;
+		params[i].density = 0.0;
+		params[i].radius = 0.0;
+		params[i].mass = 0.0;
+		cd = 0.0;
+		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
+		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
+		params[i].migType = MIGRATION_TYPE_NO;
+		params[i].migStopAt = 0.0;
+
+		var_t mu = K2*(params[0].mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			throw nbody_exception("Cannot calculate phase.");
+		}
+		coor[i] = rVec;
+		velo[i] = vVec;
+	}
 }
 
 // Print body positions
