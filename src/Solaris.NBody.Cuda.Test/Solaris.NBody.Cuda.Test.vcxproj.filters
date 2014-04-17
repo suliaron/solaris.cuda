@@ -8,7 +8,6 @@
   <ItemGroup>
     <CudaCompile Include="unit_test_cuda.cu" />
     <CudaCompile Include="unit_test_performance_cpu_vs_gpu.cu" />
-    <CudaCompile Include="main.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="unit_test.cpp" />

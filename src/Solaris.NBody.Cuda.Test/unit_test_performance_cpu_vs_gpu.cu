@@ -7,7 +7,7 @@
 #include <sstream>
 #include <vector>
 
-#ifdef WIN32
+#ifdef _WIN32 || _WIN64
 #include <Windows.h>
 #else
 #include <sys/time.h>
@@ -526,7 +526,10 @@ var_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax)
 //	populate_pp_disk(disk, nBodies, ppd);
 
 	std::vector<var_t> h_acce;
-	h_acce.resize(ppd->h_y[0].size());
+
+	ode *o = ppd;
+
+	h_acce.resize(o->h_y[0].size());
 
 	pp_disk::param_t* params = (pp_disk::param_t*)ppd->h_p.data();
 	vec_t* coor = (vec_t*)ppd->h_y[0].data();
