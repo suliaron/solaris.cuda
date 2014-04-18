@@ -544,24 +544,48 @@ vec_t calculate_grav_accel_pair(const vec_t ci, const vec_t cj, var_t mass, vec_
 static __global__
 void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
 {
-	int	bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
+	const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
 
+	vec_t ai;
 	if (bodyIdx < iBound.sink.y) {
-		acce[bodyIdx].x = 0.0;
-		acce[bodyIdx].y = 0.0;
-		acce[bodyIdx].z = 0.0;
-		acce[bodyIdx].w = 0.0;
+		//acce[bodyIdx].x = 0.0;
+		//acce[bodyIdx].y = 0.0;
+		//acce[bodyIdx].z = 0.0;
+		//acce[bodyIdx].w = 0.0;
+		vec_t dVec;
+		vec_t ci = coor[bodyIdx];
+		ai = acce[bodyIdx];
+		ai.x = ai.y = ai.z = ai.w = 0.0;
 		for (int j = iBound.source.x; j < iBound.source.y; j++) 
 		{
 			if (j == bodyIdx) {
 				continue;
 			}
-			acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
+			//acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
+	
+			dVec.x = coor[j].x - ci.x;
+			dVec.y = coor[j].y - ci.y;
+			dVec.z = coor[j].z - ci.z;
+
+			dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
+			var_t r = sqrt(dVec.w);								// = r
+
+			dVec.w = params[j].mass / (r*dVec.w);
+
+			//acce[bodyIdx].x += dVec.w * dVec.x;
+			//acce[bodyIdx].y += dVec.w * dVec.y;
+			//acce[bodyIdx].z += dVec.w * dVec.z;
+			ai.x += dVec.w * dVec.x;
+			ai.y += dVec.w * dVec.y;
+			ai.z += dVec.w * dVec.z;
 		}
 	}
-	acce[bodyIdx].x *= K2;
-	acce[bodyIdx].y *= K2;
-	acce[bodyIdx].z *= K2;
+	//acce[bodyIdx].x *= K2;
+	//acce[bodyIdx].y *= K2;
+	//acce[bodyIdx].z *= K2;
+	acce[bodyIdx].x = K2 * ai.x;
+	acce[bodyIdx].y = K2 * ai.y;
+	acce[bodyIdx].z = K2 * ai.z;
 }
 
 static __global__
@@ -903,7 +927,7 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 		vec_t* coor		= (vec_t*)y[0].data().get();
 		vec_t* velo		= (vec_t*)y[1].data().get();
 		vec_t* acce		= (vec_t*)dy.data().get();
-		// Calculate accelerations origanted from the gravitatinal force
+		// Calculate accelerations originated from the gravitational force
 		call_calculate_grav_accel_kernel(params, coor, acce);
 
 		if (0 != h_gasDisk && 0 < nBodies->n_gas_drag()) {

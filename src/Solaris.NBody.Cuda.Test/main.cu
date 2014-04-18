@@ -342,6 +342,8 @@ static string get_printout_file(options& opt, int pcount)
 	return combine_path(opt.printoutDir, string(buffer));
 }
 
+
+// -nBodies 1 1 0 10000 0 100000 0 -i RKF78 -a 1.0e-10 -t 1000 -dt 10.0 -p 10 10 10 -o C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU -f C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU\nBodies_1_1_0_10000_0_100000_0.txt
 int main(int argc, const char** argv)
 {
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
