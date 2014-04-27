@@ -501,12 +501,12 @@ ttt_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, dev
 	{
 		ppd->copy_to_device();
 
-		tmr.cuda_start();
 		for (int i = 0; i < iterMax; i++) {
+			tmr.cuda_start();
 			ppd->calculate_dy(1, 0, 0.0, ppd->d_p, ppd->d_y, ppd->d_yout[1]);
+			tmr.cuda_stop();
+			result += (var_t)tmr.cuda_ellapsed_time();
 		}
-		tmr.cuda_stop();
-		result = (var_t)tmr.cuda_ellapsed_time();
 	}
 	else {
 
@@ -541,7 +541,7 @@ ttt_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, dev
 	return result / iterMax;
 }
 
-void parse_options(int argc, const char** argv, int *n0, int *n1, int *dn, device_type_t *dev_t)
+void parse_options(int argc, const char** argv, number_of_bodies **nBodies, int *iterMax, device_type_t *dev_t)
 {
 	int i = 1;
 
@@ -549,19 +549,22 @@ void parse_options(int argc, const char** argv, int *n0, int *n1, int *dn, devic
 		string p = argv[i];
 
 		// Number of bodies
-		if (p == "-n0") {
+		if (p == "-nBodies") {
 			i++;
-			*n0 = atoi(argv[i]);
+			int	star				= atoi(argv[i++]);
+			int	giant_planet		= atoi(argv[i++]);
+			int	rocky_planet		= atoi(argv[i++]);
+			int	proto_planet		= atoi(argv[i++]);
+			int	super_planetesimal	= atoi(argv[i++]);
+			int	planetesimal		= atoi(argv[i++]);
+			int	test_particle		= atoi(argv[i]);
+			*nBodies = new number_of_bodies(star, giant_planet, rocky_planet, proto_planet, super_planetesimal, planetesimal, test_particle);
 		}
-		else if (p == "-n1") {
+		else if (p == "-iM" ||p == "--iterMax") {
 			i++;
-			*n1 = atoi(argv[i]);
+			*iterMax = atoi(argv[i]);
 		}
-		else if (p == "-dn") {
-			i++;
-			*dn = atoi(argv[i]);
-		}
-		else if (p == "-dev") {
+		else if (p == "-d" || p == "--device") {
 			i++;
 			p = argv[i];
 			if (p == "CPU" || p == "cpu") {
@@ -586,22 +589,51 @@ void parse_options(int argc, const char** argv, int *n0, int *n1, int *dn, devic
 // -n0 10000 -n1 10000 -dn 10 -dev gpu
 int main(int argc, const char** argv)
 {
-	device_type_t dev_t;
-	int	n0 = 10;
-	int n1 = 100;
-	int dn = 10;
+	device_type_t dev_t = CPU;
+	number_of_bodies *nBodies = 0;
+	int_t iterMax = 10;
 
-	parse_options(argc, argv, &n0, &n1, &dn, &dev_t);
+	parse_options(argc, argv, &nBodies, &iterMax, &dev_t);
 	string dev_str = (dev_t == CPU ? "CPU_" : "GPU_kernel3_");
 
+	//{
+	//	string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Debug";
+	//	string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
+
+	//	ofstream data;
+	//	int_t iterMax = 10;
+	//	for (int n = n0; n <= n1; n += dn) {
+	//		for (int i = 1; i <= iterMax; i++) {
+	//			number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 0);
+	//			string filename = "gravity_acceleration_on_" + dev_str;
+	//			filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
+
+	//			string path = combine_path(outDir, filename);
+	//			data.open(path.c_str(), std::ofstream::app);
+	//			if (!data.is_open())
+	//			{
+	//				cerr << "Unable to open file: " << path << "!\n";
+	//				return 0;
+	//			}
+	//			if ( i == 1 ) {
+	//				data << "col1: # of iteration col2: execution time [msec]" << endl;
+	//			}
+	//			var_t elapsedTime = compute_gravity_acceleration(nBodies, i, dev_t);
+	//			cout << setw(10) << i << " " << setw(10) << elapsedTime << endl;
+	//			data << setw(10) << i << " " << setw(10) << elapsedTime << endl;
+	//			data.close();
+	//		}
+	//	}
+	//}
+
 	{
-		string outDir = "C:\\Work\\Projects\\solaris.cuda\\PerformanceTest";
+		//string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Debug";
+		string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
 
 		ofstream data;
-		int_t iterMax = 10;
 		for (int n = n0; n <= n1; n += dn) {
 			for (int i = 1; i <= iterMax; i++) {
-				number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 0);
+				number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 10000);
 				string filename = "gravity_acceleration_on_" + dev_str;
 				filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
 
