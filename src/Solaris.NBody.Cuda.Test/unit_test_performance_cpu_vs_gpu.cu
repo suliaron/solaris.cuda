@@ -34,8 +34,7 @@
 #include "options.h"
 #include "pp_disk.h"
 
-#include "timer.h"
-
+#include "stop_watch.h"
 
 using namespace std;
 
@@ -488,11 +487,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 }
 
 
-ttt_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, device_type_t dev_t)
+void compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, device_type_t dev_t, var_t* elapsed)
 {
-	timer tmr;
-	var_t result = 0.0;
-
 	pp_disk *ppd = new pp_disk(nBodies, 0, 0.0);
 	var2_t disk = {5.0, 6.0};	// AU
 	ppd->generate_rand(disk);
@@ -502,10 +498,11 @@ ttt_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, dev
 		ppd->copy_to_device();
 
 		for (int i = 0; i < iterMax; i++) {
-			tmr.cuda_start();
 			ppd->calculate_dy(1, 0, 0.0, ppd->d_p, ppd->d_y, ppd->d_yout[1]);
-			tmr.cuda_stop();
-			result += (var_t)tmr.cuda_ellapsed_time();
+			for (int j = 0; j < PP_DISK_KERNEL_N; j++) 
+			{
+				elapsed[j] += ppd->elapsed[j];
+			}
 		}
 	}
 	else {
@@ -517,28 +514,39 @@ ttt_t compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, dev
 		vec_t* velo = (vec_t*)ppd->h_y[1].data();
 		vec_t* h_a  = (vec_t*)h_acce.data();
 
-		tmr.start();
 		for (int i = 0; i < iterMax; i++) {
 			if (0 < nBodies->n_self_interacting()) {
 				interaction_bound iBound = nBodies->get_self_interacting();
+				ppd->s_watch.start();
 				ppd->calculate_grav_accel(iBound, params, coor, h_a);
+				ppd->s_watch.stop();
+				elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_SELF_INTERACTING] += ppd->s_watch.get_ellapsed_time();
 			}
 			if (0 < nBodies->super_planetesimal + nBodies->planetesimal) {
 				interaction_bound iBound	= nBodies->get_nonself_interacting();
+				ppd->s_watch.start();
 				ppd->calculate_grav_accel(iBound, params, coor, h_a);
+				ppd->s_watch.stop();
+				elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_SELF_INTERACTING] += ppd->s_watch.get_ellapsed_time();
 			}
 			if (0 < nBodies->test_particle) {
 				interaction_bound iBound = nBodies->get_non_interacting();
+				ppd->s_watch.start();
 				ppd->calculate_grav_accel(iBound, params, coor, h_a);
+				ppd->s_watch.stop();
+				elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_INTERACTING] += ppd->s_watch.get_ellapsed_time();
 			}
 		}
-		tmr.stop();
-		result = tmr.ellapsed_time() / 1000.0;
 	}
-
 	delete ppd;
+}
 
-	return result / iterMax;
+void	clear_array(int n, var_t* data)
+{
+	for (int i = 0; i < n; i++)
+	{
+		data[i] = 0.0;
+	}
 }
 
 void parse_options(int argc, const char** argv, number_of_bodies **nBodies, int *iterMax, device_type_t *dev_t)
@@ -586,7 +594,7 @@ void parse_options(int argc, const char** argv, number_of_bodies **nBodies, int 
 	}
 }
 
-// -n0 10000 -n1 10000 -dn 10 -dev gpu
+// -nBodies 0 10000 0 0 0 0 0 -iM 5 -d gpu
 int main(int argc, const char** argv)
 {
 	device_type_t dev_t = CPU;
@@ -596,63 +604,48 @@ int main(int argc, const char** argv)
 	parse_options(argc, argv, &nBodies, &iterMax, &dev_t);
 	string dev_str = (dev_t == CPU ? "CPU_" : "GPU_kernel3_");
 
-	//{
-	//	string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Debug";
-	//	string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
-
-	//	ofstream data;
-	//	int_t iterMax = 10;
-	//	for (int n = n0; n <= n1; n += dn) {
-	//		for (int i = 1; i <= iterMax; i++) {
-	//			number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 0);
-	//			string filename = "gravity_acceleration_on_" + dev_str;
-	//			filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
-
-	//			string path = combine_path(outDir, filename);
-	//			data.open(path.c_str(), std::ofstream::app);
-	//			if (!data.is_open())
-	//			{
-	//				cerr << "Unable to open file: " << path << "!\n";
-	//				return 0;
-	//			}
-	//			if ( i == 1 ) {
-	//				data << "col1: # of iteration col2: execution time [msec]" << endl;
-	//			}
-	//			var_t elapsedTime = compute_gravity_acceleration(nBodies, i, dev_t);
-	//			cout << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-	//			data << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-	//			data.close();
-	//		}
-	//	}
-	//}
-
 	{
-		//string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Debug";
-		string outDir = "D:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
-
-		ofstream data;
-		for (int n = n0; n <= n1; n += dn) {
-			for (int i = 1; i <= iterMax; i++) {
-				number_of_bodies *nBodies = new number_of_bodies(0, n, 0, 0, 0, 0, 10000);
-				string filename = "gravity_acceleration_on_" + dev_str;
-				filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
-
-				string path = combine_path(outDir, filename);
-				data.open(path.c_str(), std::ofstream::app);
-				if (!data.is_open())
-				{
-					cerr << "Unable to open file: " << path << "!\n";
-					return 0;
-				}
-				if ( i == 1 ) {
-					data << "col1: # of iteration col2: execution time [msec]" << endl;
-				}
-				var_t elapsedTime = compute_gravity_acceleration(nBodies, i, dev_t);
-				cout << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-				data << setw(10) << i << " " << setw(10) << elapsedTime << endl;
-				data.close();
-			}
+		string outDir = "C:\\Work\\Projects\\solaris.cuda.ver1.1\\solaris.cuda\\PerformanceTest\\Release";
+		string filename = "TEST_gravity_acceleration_on_" + dev_str;
+		filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
+		string path = combine_path(outDir, filename);
+		ofstream data(path.c_str(), std::ofstream::app);
+		if (!data.is_open())
+		{
+			cerr << "Unable to open file: " << path << "!\n";
+			return 0;
 		}
+		cout << "# of iteration ";
+		data << "# of iteration ";
+		for (int j = 0; j < PP_DISK_KERNEL_N; j++)
+		{
+			cout << pp_disk::kernel_name[j] << " ";
+			data << pp_disk::kernel_name[j] << " ";
+		}
+		cout << endl;
+		data << endl;
+
+		var_t* elapsed = new var_t[PP_DISK_KERNEL_N];
+		clear_array(PP_DISK_KERNEL_N, elapsed);
+
+		for (int i = 1; i <= iterMax; i++) {
+			number_of_bodies *nBodies_copy = new number_of_bodies(nBodies->star, nBodies->giant_planet, nBodies->rocky_planet, nBodies->proto_planet, nBodies->super_planetesimal, nBodies->planetesimal, nBodies->test_particle);
+
+			compute_gravity_acceleration(nBodies_copy, i, dev_t, elapsed);
+
+			cout << setw(10) << i << " " ;
+			data << setw(10) << i << " " ;
+			for (int j = 0; j < PP_DISK_KERNEL_N; j++)
+			{
+				cout << setw(10) << elapsed[j] / (var_t)i << " ";
+				data << setw(10) << elapsed[j] / (var_t)i << " ";
+			}
+			cout << endl;
+			data << endl;
+			clear_array(PP_DISK_KERNEL_N, elapsed);
+		}
+		data.close();
+		delete elapsed;
 	}
 
 	return 0;

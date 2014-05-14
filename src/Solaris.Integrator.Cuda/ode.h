@@ -4,16 +4,32 @@
 #include <thrust/device_vector.h>
 
 #include "config.h"
-#ifdef TIMER
-#include "timer.h"
+#ifdef STOP_WATCH
+#include "stop_watch.h"
+#endif
+
+#ifdef STOP_WATCH
+typedef enum ode_kernel
+{
+	ODE_KERNEL_THRUST_COPY_FROM_DEVICE_TO_DEVICE,
+	ODE_KERNEL_THRUST_COPY_TO_DEVICE,
+	ODE_KERNEL_THRUST_COPY_TO_HOST,
+	ODE_KERNEL_N
+} ode_kernel_t;
 #endif
 
 class ode
 {
 protected:
-#ifdef TIMER
-	timer	tmr;
+
+#ifdef STOP_WATCH
+	stop_watch		s_watch;
+	var_t			elapsed[ODE_KERNEL_N];
+	static char*	kernel_name[ODE_KERNEL_N];
+
+	void			clear_elasped();
 #endif
+
 public:
 	//! Current time
 	ttt_t t;

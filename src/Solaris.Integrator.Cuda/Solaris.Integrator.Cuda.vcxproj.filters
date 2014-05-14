@@ -45,7 +45,7 @@
     <ClInclude Include="rkf7.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="timer.h">
+    <ClInclude Include="stop_watch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stop_watch.h">
@@ -80,7 +80,7 @@
     <CudaCompile Include="rkf7.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="timer.cu">
+    <CudaCompile Include="stop_watch.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
     <CudaCompile Include="stop_watch.cu">

@@ -5,6 +5,9 @@
 #include "config.h"
 #include "interaction_bound.h"
 #include "ode.h"
+#ifdef STOP_WATCH
+#include "stop_watch.h"
+#endif
 
 class number_of_bodies;
 class gas_disk;
@@ -18,9 +21,38 @@ typedef enum migration_type
 	MIGRATION_TYPE_TYPE_II
 } migration_type_t;
 
+#ifdef STOP_WATCH
+typedef enum pp_disk_kernel
+{
+	PP_DISK_KERNEL_THRUST_COPY_FROM_DEVICE_TO_DEVICE,
+	PP_DISK_KERNEL_THRUST_COPY_TO_DEVICE,
+	PP_DISK_KERNEL_THRUST_COPY_TO_HOST,
+	PP_DISK_KERNEL_ADD_TWO_VECTOR,
+	PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_TRIAL,
+	PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL,
+	PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_SELF_INTERACTING,
+	PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_SELF_INTERACTING,
+	PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_INTERACTING,
+	PP_DISK_KERNEL_CALCULATE_DRAG_ACCEL,
+	PP_DISK_KERNEL_CALCULATE_MIGRATEI_ACCEL,
+	PP_DISK_KERNEL_CALCULATE_ORBELEM,
+	PP_DISK_KERNEL_N
+} pp_disk_kernel_t;
+#endif
+
 class pp_disk : public ode
 {
 public:
+
+#ifdef STOP_WATCH
+
+	stop_watch		s_watch;
+	var_t			elapsed[PP_DISK_KERNEL_N];
+	static string	kernel_name[PP_DISK_KERNEL_N];
+
+	void			clear_elasped();
+	
+#endif
 
 	// Type for parameters
 	typedef struct param
@@ -82,7 +114,7 @@ public:
 
 	void transform_to_bc();
 	//! Computes the total mass of the system
-	double	get_total_mass();
+	var_t	get_total_mass();
 	//! Compute the position and velocity of the system's barycenter
 	/*  
 		\param M0 will contains the total mass of the system

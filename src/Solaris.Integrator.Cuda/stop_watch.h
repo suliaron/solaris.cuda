@@ -6,21 +6,22 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-class timer
+// includes project
+#include "config.h"
+
+class stop_watch
 {
 public:
-	timer();
-	~timer();
+	stop_watch();
+	~stop_watch();
 
 	int64_t start();
 	int64_t stop();
-	void reset();
-	int64_t ellapsed_time();
+	int64_t get_ellapsed_time();
 
 	void cuda_start();
 	void cuda_stop();
-	void cuda_reset();
-	float cuda_ellapsed_time();
+	var_t get_cuda_ellapsed_time();
 
 private:
 	int64_t GetTimeMicro64();
