@@ -21,7 +21,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\config\config.h" />
     <ClInclude Include="..\..\config\constants.h" />
-    <ClInclude Include="..\Solaris.Integrator.Cuda\timer.h" />
     <ClInclude Include="gas_disk.h" />
     <ClInclude Include="interaction_bound.h" />
     <ClInclude Include="pp_disk.h" />

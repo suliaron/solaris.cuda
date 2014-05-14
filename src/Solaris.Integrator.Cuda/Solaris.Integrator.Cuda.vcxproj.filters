@@ -48,6 +48,9 @@
     <ClInclude Include="timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stop_watch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="euler.cu">
@@ -78,6 +81,9 @@
       <Filter>Source Files</Filter>
     </CudaCompile>
     <CudaCompile Include="timer.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="stop_watch.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

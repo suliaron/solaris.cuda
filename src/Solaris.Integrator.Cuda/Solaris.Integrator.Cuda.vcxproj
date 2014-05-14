@@ -30,6 +30,7 @@
     <ClInclude Include="rkn76.h" />
     <ClInclude Include="rungekutta.h" />
     <ClInclude Include="rungekuttanystrom.h" />
+    <ClInclude Include="stop_watch.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
@@ -42,6 +43,7 @@
     <CudaCompile Include="rkn76.cu" />
     <CudaCompile Include="rungekutta.cu" />
     <CudaCompile Include="rungekuttanystrom.cu" />
+    <CudaCompile Include="stop_watch.cu" />
     <CudaCompile Include="timer.cu" />
     <CudaCompile Include="util.cu" />
   </ItemGroup>
