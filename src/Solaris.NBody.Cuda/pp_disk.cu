@@ -21,13 +21,37 @@
 #include "nbody_exception.h"
 #include "number_of_bodies.h"
 #include "pp_disk.h"
-#ifdef TIMER
-#include "timer.h"
-#endif
 
 using namespace std;
 
 #define THREADS_PER_BLOCK	256
+
+#ifdef STOP_WATCH
+
+void pp_disk::clear_elasped()
+{
+	for (int i = 0; i < PP_DISK_KERNEL_N; i++)
+	{
+		elapsed[i] = 0.0;
+	}
+}
+
+string pp_disk::kernel_name[PP_DISK_KERNEL_N] = {
+	"PP_DISK_KERNEL_THRUST_COPY_FROM_DEVICE_TO_DEVICE",
+	"PP_DISK_KERNEL_THRUST_COPY_TO_DEVICE",
+	"PP_DISK_KERNEL_THRUST_COPY_TO_HOST",
+	"PP_DISK_KERNEL_ADD_TWO_VECTOR",
+	"PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_TRIAL",
+	"PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL",
+	"PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_SELF_INTERACTING",
+	"PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_SELF_INTERACTING",
+	"PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_INTERACTING",
+	"PP_DISK_KERNEL_CALCULATE_DRAG_ACCEL",
+	"PP_DISK_KERNEL_CALCULATE_MIGRATEI_ACCEL",
+	"PP_DISK_KERNEL_CALCULATE_ORBELEM"
+};
+
+#endif
 
 static cudaError_t HandleError(cudaError_t cudaStatus, const char *file, int line)
 {
@@ -506,19 +530,6 @@ var_t  mean_thermal_speed_CMU(const gas_disk* gasDisk, var_t r)
 	return gasDisk->c_vth * sqrt(gasDisk->temp.x * pow(r, gasDisk->temp.y));
 }
 
-
-
-// a = a + b
-static __global__
-void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
-{
-	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (n > tid) {
-		a[tid] += b[tid];
-	}
-}
-
 // Calculate acceleration caused by particle j on particle i 
 static __host__ __device__ 
 vec_t calculate_grav_accel_pair(const vec_t ci, const vec_t cj, var_t mass, vec_t ai)
@@ -540,6 +551,70 @@ vec_t calculate_grav_accel_pair(const vec_t ci, const vec_t cj, var_t mass, vec_
 
 	return ai;
 }
+
+/****************** KERNEL functions starts here ******************/
+
+// a = a + b
+static __global__
+void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
+{
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (n > tid) {
+		a[tid] += b[tid];
+	}
+}
+
+__constant__ int_t kernel_param[4];
+
+static __global__
+void	calculate_grav_accel_trial_kernel(/*interaction_bound iBound, */const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
+{
+	//const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
+	const int bodyIdx = kernel_param[0] + blockIdx.x * blockDim.x + threadIdx.x;
+
+	__shared__ var_t data[20];
+
+	//vec_t ai;
+	//if (bodyIdx < iBound.sink.y) {
+	//if (bodyIdx < kernel_param[1]) {
+		//vec_t dVec; = data[0..3]
+		//vec_t ci = coor[bodyIdx];
+		data[4] = coor[bodyIdx].x;
+		data[5] = coor[bodyIdx].y;
+		data[6] = coor[bodyIdx].z;
+		//data[7] = coor[bodyIdx].w;
+
+		//ai = acce[bodyIdx]; = data[8..11]
+
+		data[8] = data[9] =  data[10] =  data[11] = 0.0;
+		//for (int j = kernel_param[2]; j < kernel_param[3]; j++) 
+		{
+			//if (j == bodyIdx) {
+			//	continue;
+			//}
+			int j = 1;
+	
+			data[0] = coor[j].x - data[4];
+			data[1] = coor[j].y - data[5];
+			data[2] = coor[j].z - data[6];;
+
+			data[3] = SQR(data[0]) + SQR(data[1]) + SQR(data[2]);	// = r2
+			//var_t r = sqrt(data[3]);								// = r
+			var_t r = 1;
+
+			data[3] = params[j].mass / (r*data[3]);
+
+			data[8 ] += data[3] * data[0];
+			data[9 ] += data[3] * data[1];
+			data[10] += data[3] * data[2];
+		}
+	//}
+	acce[bodyIdx].x = data[8];
+	acce[bodyIdx].y = data[9];
+	acce[bodyIdx].z = data[10];
+}
+
 
 static __global__
 void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
@@ -702,6 +777,7 @@ void	calculate_orbelem_kernel(
 	}
 }
 
+/****************** KERNEL functions ends here ******************/
 
 
 
@@ -716,6 +792,9 @@ pp_disk::pp_disk(number_of_bodies *nBodies, gas_disk *gasDisk, ttt_t t0) :
 	acceMigrateII(d_var_t())
 {
 	allocate_vectors();
+#ifdef STOP_WATCH
+	clear_elasped();
+#endif
 }
 
 pp_disk::~pp_disk()
@@ -751,9 +830,6 @@ void pp_disk::allocate_vectors()
 			acceMigrateII.resize(ndim * nBodies->giant_planet);
 		}
 	}
-
-	//int_t	size0 = h_y[0].size();
-	//int_t	size1 = h_y[1].size();
 }
 
 void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce)
@@ -778,9 +854,6 @@ void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* para
 
 cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, const vec_t *coor, vec_t *acce)
 {
-#ifdef TIMER
-	timer tmr;
-#endif
 	cudaError_t cudaStatus = cudaSuccess;
 
 	int		nBodyToCalculate;
@@ -795,13 +868,13 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
-#ifdef TIMER
-		tmr.cuda_start();
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
 #endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_SELF_INTERACTING] = s_watch.get_cuda_ellapsed_time();
 #endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
@@ -817,13 +890,13 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
-#ifdef TIMER
-		tmr.cuda_start();
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
 #endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_SELF_INTERACTING] = s_watch.get_cuda_ellapsed_time();
 #endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
@@ -839,13 +912,13 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		grid.x		= nBlock;
 		block.x		= nThread;
 
-#ifdef TIMER
-		tmr.cuda_start();
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
 #endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "calculate_grav_accel_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_INTERACTING] = s_watch.get_cuda_ellapsed_time();
 #endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
@@ -871,7 +944,14 @@ cudaError_t pp_disk::call_calculate_drag_accel_kernel(ttt_t time, const param_t 
 		dim3	grid(nBlock);
 		dim3	block(nThread);
 
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
+#endif
 		calculate_drag_accel_kernel<<<grid, block>>>(iBound, timeF, d_gasDisk, params, coor, velo, acce);
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_CALCULATE_DRAG_ACCEL] = s_watch.get_cuda_ellapsed_time();
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("calculate_grav_accel_kernel failed", cudaStatus);
@@ -895,7 +975,14 @@ cudaError_t pp_disk::call_calculate_migrateI_accel_kernel(ttt_t time, param_t* p
 		dim3	grid(nBlock);
 		dim3	block(nThread);
 
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
+#endif
 		calculate_migrateI_accel_kernel<<<grid, block>>>(iBound, timeF, d_gasDisk, params, coor, velo, acce);
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_CALCULATE_MIGRATEI_ACCEL] = s_watch.get_cuda_ellapsed_time();
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("calculate_migrateI_accel_kernel failed", cudaStatus);
@@ -908,14 +995,18 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 {
 	cudaError_t cudaStatus = cudaSuccess;
 
-#ifdef TIMER
-	tmr.cuda_start();
-#endif
 	switch (i)
 	{
 	case 0:
 		// Copy velocities from previous step
+#ifdef STOP_WATCH
+		s_watch.cuda_start();
+#endif
 		thrust::copy(y[1].begin(), y[1].end(), dy.begin());
+#ifdef STOP_WATCH
+		s_watch.cuda_stop();
+		elapsed[PP_DISK_KERNEL_THRUST_COPY_FROM_DEVICE_TO_DEVICE] = s_watch.get_cuda_ellapsed_time();
+#endif
 		cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw nbody_exception("thrust::copy kernel failed", cudaStatus);
@@ -950,20 +1041,21 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 			dim3 grid(nBlock);
 			dim3 block(nThread);
 
+#ifdef STOP_WATCH
+			s_watch.cuda_start();
+#endif
 			add_two_vector_kernel<<<grid, block>>>(nData, aSum, (var_t*)aGD);
+#ifdef STOP_WATCH
+			s_watch.cuda_stop();
+			elapsed[PP_DISK_KERNEL_ADD_TWO_VECTOR] = s_watch.get_cuda_ellapsed_time();
+#endif
 			cudaStatus = HANDLE_ERROR(cudaGetLastError());
 			if (cudaStatus != cudaSuccess) {
 				throw nbody_exception("add_two_vector_kernel failed", cudaStatus);
 			}
-
 		}
-
 		break;
 	}
-#ifdef TIMER
-	tmr.cuda_stop();
-	cout << setw(50) << "calculate_dy() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 }
 
 pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
@@ -985,7 +1077,14 @@ pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
 	vec_t	*coor = (vec_t*)d_y[0].data().get();
 	vec_t	*velo = (vec_t*)d_y[1].data().get();
 
+#ifdef STOP_WATCH
+	s_watch.cuda_start();
+#endif
 	calculate_orbelem_kernel<<<grid, block>>>(nBodies->total, refBodyId, params, coor, velo, d_orbelem.data().get());
+#ifdef STOP_WATCH
+	s_watch.cuda_stop();
+	elapsed[PP_DISK_KERNEL_CALCULATE_ORBELEM] = s_watch.get_cuda_ellapsed_time();
+#endif
 	cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
 		throw nbody_exception("calculate_orbelem_kernel failed", cudaStatus);
@@ -996,7 +1095,7 @@ pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
 	return h_orbelem;
 }
 
-double	pp_disk::get_total_mass()
+var_t	pp_disk::get_total_mass()
 {
 	var_t totalMass = 0.0;
 
@@ -1053,9 +1152,6 @@ void pp_disk::transform_to_bc()
 
 void pp_disk::load(string filename, int n)
 {
-#ifdef TIMER
-	cout << "ppd_disk::load start at " << tmr.start() << endl;
-#endif
 	cout << "Loading position started";
 
 	vec_t* coor = (vec_t*)h_y[0].data();
@@ -1096,10 +1192,6 @@ void pp_disk::load(string filename, int n)
 	else {
 		throw nbody_exception("Cannot open file.");
 	}
-#ifdef TIMER
-	cout << "            ... stop at " << tmr.stop() << endl;
-	cout << "Took: " << tmr.ellapsed_time() << endl;
-#endif
 
 	cout << " ... finished" << endl;
 }

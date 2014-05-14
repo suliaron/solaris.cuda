@@ -2,9 +2,9 @@
 #include <Windows.h>
 
 // include project
-#include "timer.h"
+#include "stop_watch.h"
 
-timer::timer() :
+stop_watch::stop_watch() :
 	_start(0),
 	_stop(0)
 {
@@ -12,55 +12,48 @@ timer::timer() :
 	cudaEventCreate(&_cuda_stop);
 }
 
-timer::~timer()
+stop_watch::~stop_watch()
 {
 	cudaEventDestroy(_cuda_start);
 	cudaEventDestroy(_cuda_stop);
 }
 
-int64_t timer::start()
+int64_t stop_watch::start()
 {
 	_start = GetTimeMicro64();
 	return _start;
 }
 
-int64_t timer::stop()
+int64_t stop_watch::stop()
 {
 	_stop = GetTimeMicro64();
 	return _stop;
 }
 
-void timer::reset()
-{
-	_start = 0;
-	_stop = 0;
-}
-
-int64_t timer::ellapsed_time()
+int64_t stop_watch::get_ellapsed_time()
 {
 	return (_stop - _start);
 }
 
-void timer::cuda_start()
+void stop_watch::cuda_start()
 {
 	cudaEventRecord(_cuda_start, 0);
 }
 
-void timer::cuda_stop()
+void stop_watch::cuda_stop()
 {
 	cudaEventRecord(_cuda_stop, 0);
 	cudaEventSynchronize(_cuda_stop);
 }
 
-float timer::cuda_ellapsed_time()
+var_t stop_watch::get_cuda_ellapsed_time()
 {
 	float elapsed = 0.f;
 	cudaEventElapsedTime(&elapsed, _cuda_start, _cuda_stop);
-	return elapsed;
+	return (var_t)elapsed;
 }
 
-
-int64_t timer::GetTimeMicro64()
+int64_t stop_watch::GetTimeMicro64()
 {
 	/* Windows */
 	FILETIME ft;

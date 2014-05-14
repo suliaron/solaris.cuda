@@ -30,7 +30,7 @@
     <ClInclude Include="rkn76.h" />
     <ClInclude Include="rungekutta.h" />
     <ClInclude Include="rungekuttanystrom.h" />
-    <ClInclude Include="timer.h" />
+    <ClInclude Include="stop_watch.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
@@ -42,7 +42,7 @@
     <CudaCompile Include="rkn76.cu" />
     <CudaCompile Include="rungekutta.cu" />
     <CudaCompile Include="rungekuttanystrom.cu" />
-    <CudaCompile Include="timer.cu" />
+    <CudaCompile Include="stop_watch.cu" />
     <CudaCompile Include="util.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -141,7 +141,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)config\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TIMER;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STOP_WATCH;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -188,6 +188,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)config;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STOP_WATCH;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
