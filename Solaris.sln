@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Solaris.NBody.Cuda.Test", "
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Solaris.Initial.Cuda", "src\Solaris.Initial.Cuda\Solaris.Initial.vcxproj", "{E8A3DAB2-DEA2-4A5C-87CC-224685BB2718}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6927A89E-A1DD-43D2-9C1A-B1D5F9E1BBAC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
