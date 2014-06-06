@@ -589,7 +589,7 @@ void parse_options(int argc, const char** argv, number_of_bodies **nBodies, int 
 			}
 		}
 		else {
-			cerr << "Invalid switch on command-line." << endl;
+			cerr << "Invalid switch on command-line: " << p << endl;
 			exit(0);
 		}
 		i++;

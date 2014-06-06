@@ -629,7 +629,7 @@ void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_
 		//acce[bodyIdx].w = 0.0;
 		vec_t dVec;
 		vec_t ci = coor[bodyIdx];
-		ai = acce[bodyIdx];
+		//ai = acce[bodyIdx];
 		ai.x = ai.y = ai.z = ai.w = 0.0;
 		for (int j = iBound.source.x; j < iBound.source.y; j++) 
 		{
@@ -835,20 +835,36 @@ void pp_disk::allocate_vectors()
 void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce)
 {
 	for (int bodyIdx = iBound.sink.x; bodyIdx < iBound.sink.y; bodyIdx++) {
-		acce[bodyIdx].x = 0.0;
-		acce[bodyIdx].y = 0.0;
-		acce[bodyIdx].z = 0.0;
-		acce[bodyIdx].w = 0.0;
+		//acce[bodyIdx].x = 0.0;
+		//acce[bodyIdx].y = 0.0;
+		//acce[bodyIdx].z = 0.0;
+		//acce[bodyIdx].w = 0.0;
+		vec_t ai = {0.0, 0.0, 0.0, 0.0};
 		for (int j = iBound.source.x; j < iBound.source.y; j++) {
 			if (j == bodyIdx) 
 			{
 				continue;
 			}
-			acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
+			//acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
+
+			vec_t dVec;
+			dVec.x = coor[j].x - coor[bodyIdx].x;
+			dVec.y = coor[j].y - coor[bodyIdx].y;
+			dVec.z = coor[j].z - coor[bodyIdx].z;
+
+			dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
+			var_t r = sqrt(dVec.w);								// = r
+
+			dVec.w = params[j].mass / (r*dVec.w);
+
+			ai.x += dVec.w * dVec.x;
+			ai.y += dVec.w * dVec.y;
+			ai.z += dVec.w * dVec.z;
+
 		}
-		acce[bodyIdx].x *= K2;
-		acce[bodyIdx].y *= K2;
-		acce[bodyIdx].z *= K2;
+		acce[bodyIdx].x = K2 * ai.x;
+		acce[bodyIdx].y = K2 * ai.y;
+		acce[bodyIdx].z = K2 * ai.z;
 	}
 }
 
