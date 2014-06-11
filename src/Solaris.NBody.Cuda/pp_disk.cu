@@ -1,4 +1,4 @@
-// includes system 
+﻿// includes system 
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -565,78 +565,71 @@ void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
 	}
 }
 
-__constant__ int_t kernel_param[4];
-
-static __global__
-void	calculate_grav_accel_trial_kernel(/*interaction_bound iBound, */const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
-{
-	//const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
-	const int bodyIdx = kernel_param[0] + blockIdx.x * blockDim.x + threadIdx.x;
-
-	__shared__ var_t data[20];
-
-	//vec_t ai;
-	//if (bodyIdx < iBound.sink.y) {
-	//if (bodyIdx < kernel_param[1]) {
-		//vec_t dVec; = data[0..3]
-		//vec_t ci = coor[bodyIdx];
-		data[4] = coor[bodyIdx].x;
-		data[5] = coor[bodyIdx].y;
-		data[6] = coor[bodyIdx].z;
-		//data[7] = coor[bodyIdx].w;
-
-		//ai = acce[bodyIdx]; = data[8..11]
-
-		data[8] = data[9] =  data[10] =  data[11] = 0.0;
-		//for (int j = kernel_param[2]; j < kernel_param[3]; j++) 
-		{
-			//if (j == bodyIdx) {
-			//	continue;
-			//}
-			int j = 1;
-	
-			data[0] = coor[j].x - data[4];
-			data[1] = coor[j].y - data[5];
-			data[2] = coor[j].z - data[6];;
-
-			data[3] = SQR(data[0]) + SQR(data[1]) + SQR(data[2]);	// = r2
-			//var_t r = sqrt(data[3]);								// = r
-			var_t r = 1;
-
-			data[3] = params[j].mass / (r*data[3]);
-
-			data[8 ] += data[3] * data[0];
-			data[9 ] += data[3] * data[1];
-			data[10] += data[3] * data[2];
-		}
-	//}
-	acce[bodyIdx].x = data[8];
-	acce[bodyIdx].y = data[9];
-	acce[bodyIdx].z = data[10];
-}
-
+//__constant__ int_t kernel_param[4];
+//
+//static __global__
+//void	calculate_grav_accel_trial_kernel(/*interaction_bound iBound, */const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
+//{
+//	//const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
+//	const int bodyIdx = kernel_param[0] + blockIdx.x * blockDim.x + threadIdx.x;
+//
+//	__shared__ var_t data[20];
+//
+//	//vec_t ai;
+//	//if (bodyIdx < iBound.sink.y) {
+//	//if (bodyIdx < kernel_param[1]) {
+//		//vec_t dVec; = data[0..3]
+//		//vec_t ci = coor[bodyIdx];
+//		data[4] = coor[bodyIdx].x;
+//		data[5] = coor[bodyIdx].y;
+//		data[6] = coor[bodyIdx].z;
+//		//data[7] = coor[bodyIdx].w;
+//
+//		//ai = acce[bodyIdx]; = data[8..11]
+//
+//		data[8] = data[9] =  data[10] =  data[11] = 0.0;
+//		//for (int j = kernel_param[2]; j < kernel_param[3]; j++) 
+//		{
+//			//if (j == bodyIdx) {
+//			//	continue;
+//			//}
+//			int j = 1;
+//	
+//			data[0] = coor[j].x - data[4];
+//			data[1] = coor[j].y - data[5];
+//			data[2] = coor[j].z - data[6];;
+//
+//			data[3] = SQR(data[0]) + SQR(data[1]) + SQR(data[2]);	// = r2
+//			//var_t r = sqrt(data[3]);								// = r
+//			var_t r = 1;
+//
+//			data[3] = params[j].mass / (r*data[3]);
+//
+//			data[8 ] += data[3] * data[0];
+//			data[9 ] += data[3] * data[1];
+//			data[10] += data[3] * data[2];
+//		}
+//	//}
+//	acce[bodyIdx].x = data[8];
+//	acce[bodyIdx].y = data[9];
+//	acce[bodyIdx].z = data[10];
+//}
 
 static __global__
 void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
 {
 	const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
 
-	vec_t ai;
 	if (bodyIdx < iBound.sink.y) {
-		//acce[bodyIdx].x = 0.0;
-		//acce[bodyIdx].y = 0.0;
-		//acce[bodyIdx].z = 0.0;
-		//acce[bodyIdx].w = 0.0;
+		vec_t ai;
 		vec_t dVec;
 		vec_t ci = coor[bodyIdx];
-		//ai = acce[bodyIdx];
 		ai.x = ai.y = ai.z = ai.w = 0.0;
 		for (int j = iBound.source.x; j < iBound.source.y; j++) 
 		{
 			if (j == bodyIdx) {
 				continue;
 			}
-			//acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
 	
 			dVec.x = coor[j].x - ci.x;
 			dVec.y = coor[j].y - ci.y;
@@ -647,20 +640,79 @@ void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_
 
 			dVec.w = params[j].mass / (r*dVec.w);
 
-			//acce[bodyIdx].x += dVec.w * dVec.x;
-			//acce[bodyIdx].y += dVec.w * dVec.y;
-			//acce[bodyIdx].z += dVec.w * dVec.z;
 			ai.x += dVec.w * dVec.x;
 			ai.y += dVec.w * dVec.y;
 			ai.z += dVec.w * dVec.z;
 		}
+		acce[bodyIdx].x = K2 * ai.x;
+		acce[bodyIdx].y = K2 * ai.y;
+		acce[bodyIdx].z = K2 * ai.z;
 	}
-	//acce[bodyIdx].x *= K2;
-	//acce[bodyIdx].y *= K2;
-	//acce[bodyIdx].z *= K2;
-	acce[bodyIdx].x = K2 * ai.x;
-	acce[bodyIdx].y = K2 * ai.y;
-	acce[bodyIdx].z = K2 * ai.z;
+}
+
+static __global__
+void	calculate_grav_accel_for_massive_bodies_kernel(interaction_bound iBound, int nuw, const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
+{
+	const int sinkIdx	= iBound.sink.x + blockIdx.y;
+	int sourceIdx		= iBound.source.x + threadIdx.x * nuw;
+	// TODO: 32 helyett dinamikusan kiszamolni 2 megfelelő hatványát
+	// Ez függeni fog a szálak számától, azaz a blockdim.x - től
+	__shared__ vec_t partial_ai[32];
+
+	partial_ai[threadIdx.x].x = 0.0;
+	partial_ai[threadIdx.x].y = 0.0;
+	partial_ai[threadIdx.x].z = 0.0;
+	// TODO: fölösleges az if, hiszen pont annyi blokkom van ahány sink-em
+	if (sinkIdx < iBound.sink.y)
+	{
+		vec_t ai = {0.0, 0.0, 0.0, 0.0};
+		while (sourceIdx < iBound.source.y) {
+			vec_t dVec;
+			vec_t ci = coor[sinkIdx];
+			for (int j = sourceIdx; j < sourceIdx + nuw && j < iBound.source.y; j++) 
+			{
+				if (j == sinkIdx) {
+					continue;
+				}
+	
+				dVec.x = coor[j].x - ci.x;
+				dVec.y = coor[j].y - ci.y;
+				dVec.z = coor[j].z - ci.z;
+
+				dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
+				var_t r = sqrt(dVec.w);								// = r
+
+				dVec.w = params[j].mass / (r*dVec.w);
+
+				ai.x += dVec.w * dVec.x;
+				ai.y += dVec.w * dVec.y;
+				ai.z += dVec.w * dVec.z;
+			}
+			sourceIdx += blockDim.x * nuw;
+		}
+		partial_ai[threadIdx.x] = ai;
+		__syncthreads();
+
+		int i = 32/2;
+		int cacheIdx = threadIdx.x;
+		while (i != 0)
+		{
+			if (cacheIdx < i)
+			{
+				partial_ai[cacheIdx].x += partial_ai[cacheIdx + i].x;
+				partial_ai[cacheIdx].y += partial_ai[cacheIdx + i].y;
+				partial_ai[cacheIdx].z += partial_ai[cacheIdx + i].z;
+			}
+			__syncthreads();
+			i /= 2;
+		}
+		if (threadIdx.x == 0)
+		{
+			acce[sinkIdx].x = K2 * partial_ai[0].x;
+			acce[sinkIdx].y = K2 * partial_ai[0].y;
+			acce[sinkIdx].z = K2 * partial_ai[0].z;
+		}
+	}
 }
 
 static __global__
@@ -835,17 +887,12 @@ void pp_disk::allocate_vectors()
 void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce)
 {
 	for (int bodyIdx = iBound.sink.x; bodyIdx < iBound.sink.y; bodyIdx++) {
-		//acce[bodyIdx].x = 0.0;
-		//acce[bodyIdx].y = 0.0;
-		//acce[bodyIdx].z = 0.0;
-		//acce[bodyIdx].w = 0.0;
 		vec_t ai = {0.0, 0.0, 0.0, 0.0};
 		for (int j = iBound.source.x; j < iBound.source.y; j++) {
 			if (j == bodyIdx) 
 			{
 				continue;
 			}
-			//acce[bodyIdx] = calculate_grav_accel_pair(coor[bodyIdx], coor[j], params[j].mass, acce[bodyIdx]);
 
 			vec_t dVec;
 			dVec.x = coor[j].x - coor[bodyIdx].x;
@@ -888,6 +935,17 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 		s_watch.cuda_start();
 #endif
 		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+#if 0
+		int	nuw		= 16;
+		grid.x		= 1;
+		grid.y		= nBodyToCalculate;
+		grid.z		= 1;
+		int nblock	= (iBound.source.y - iBound.source.x + nuw - 1)/nuw;
+		block.x		= std::min(nblock, 32);
+		block.y		= block.z = 1;
+
+		calculate_grav_accel_for_massive_bodies_kernel<<<grid, block>>>(iBound, nuw, params, coor, acce);
+#endif
 #ifdef STOP_WATCH
 		s_watch.cuda_stop();
 		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_SELF_INTERACTING] = s_watch.get_cuda_ellapsed_time();

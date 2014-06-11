@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\config\config.h" />
     <ClInclude Include="..\..\config\constants.h" />
+    <ClInclude Include="file_util.h" />
     <ClInclude Include="gas_disk.h" />
     <ClInclude Include="interaction_bound.h" />
     <ClInclude Include="pp_disk.h" />
@@ -28,6 +29,8 @@
     <ClInclude Include="nbody_exception.h" />
     <ClInclude Include="number_of_bodies.h" />
     <ClInclude Include="options.h" />
+    <ClInclude Include="tokenizer.h" />
+    <ClInclude Include="tools.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="gas_disk.cu" />
@@ -37,9 +40,12 @@
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="file_util.cpp" />
     <ClCompile Include="nbody_exception.cpp" />
     <ClCompile Include="number_of_bodies.cpp" />
     <ClCompile Include="options.cpp" />
+    <ClCompile Include="tokenizer.cpp" />
+    <ClCompile Include="tools.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E9FC9363-53FE-4FCF-BEBD-F531B519FA7B}</ProjectGuid>
@@ -142,7 +148,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)config\;$(SolutionDir)src\Solaris.Integrator.Cuda;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STOP_WATCH;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

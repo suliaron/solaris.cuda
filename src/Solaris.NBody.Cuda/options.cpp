@@ -1,10 +1,17 @@
+#include <algorithm>
+#include <iostream>
+#include <fstream>
+
 #include <math.h>
 
 #include "constants.h"
+#include "file_util.h"
 #include "gas_disk.h"
 #include "options.h"
 #include "nbody_exception.h"
 #include "number_of_bodies.h"
+#include "tokenizer.h"
+#include "tools.h"
 
 #include "euler.h"
 #include "midpoint.h"
@@ -18,6 +25,14 @@ options::options(int argc, const char** argv)
 {
 	create_default_options();
 	parse_options(argc, argv);
+	if (parameters_path.length() > 0) {
+		load(parameters_path, parameters_str);
+		parse_parameters();
+	}
+	if (gasDisk_path.length() > 0) {
+		load(gasDisk_path, gasDisk_str);
+		parse_gasdisk();
+	}
 }
 
 options::~options() 
@@ -31,8 +46,8 @@ void options::create_default_options()
 	inttype			= INTEGRATOR_EULER;
 	adaptive		= false;
 	tolerance		= 0;
-	timeStart		= 0;
-	timeStop		= 1000;
+	start_time		= 0;
+	stop_time		= 1000;
 	dt				= (var_t)0.1;
 	buffer_radius	= 3;
 	printout		= false;
@@ -83,14 +98,29 @@ void options::parse_options(int argc, const char** argv)
 	while (i < argc) {
 		string p = argv[i];
 
+		if (     p == "-ip") {
+			i++;
+			parameters_path = argv[i];
+		}
+		else if (p == "-igd") {
+			i++;
+			gasDisk_path = argv[i];
+		}
+		else if (p == "-ibl") {
+			i++;
+			bodylist_path = argv[i];
+		}
+
 		// Number of bodies
-		if (p == "-n") {
+		else if (p == "-n") {
 			i++;
 			n = atoi(argv[i]);
 			if (2 > n) {
 				throw nbody_exception("Number of bodies must exceed 2.");
 			}
 		}
+
+
 		else if (p == "-nBodies") {
 			i++;
 			int	star				= atoi(argv[i++]);
@@ -147,12 +177,12 @@ void options::parse_options(int argc, const char** argv)
 		// Time start
 		else if (p == "-t0")	{
 			i++;
-			timeStart = (var_t)atof(argv[i]) * Constants::YearToDay;
+			start_time = (var_t)atof(argv[i]) * Constants::YearToDay;
 		}
 		// Time end
 		else if (p == "-t")	{
 			i++;
-			timeStop = (var_t)atof(argv[i]) * Constants::YearToDay;
+			stop_time = (var_t)atof(argv[i]) * Constants::YearToDay;
 		}
 		// Time step
 		else if (p == "-dt") {
@@ -194,6 +224,172 @@ void options::parse_options(int argc, const char** argv)
 		}
 		i++;
 	}
+}
+
+void options::parse_parameters()
+{
+	// instantiate Tokenizer classes
+	Tokenizer fileTokenizer;
+	Tokenizer lineTokenizer;
+	string line;
+
+	fileTokenizer.set(parameters_str, "\n");
+	while ((line = fileTokenizer.next()) != "") {
+		lineTokenizer.set(line, "=");
+		string token;
+		int tokenCounter = 1;
+
+		string key; 
+		string value;
+		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
+
+			if (tokenCounter == 1)
+				key = token;
+			else if (tokenCounter == 2)
+				value = token;
+
+			tokenCounter++;
+		}
+		if (tokenCounter > 2) {
+			set_parameters_param(key, value, true);
+		}
+		else {
+			throw nbody_exception("Invalid key/value pair: " + line + ".");
+		}
+	}
+}
+
+void options::parse_gasdisk()
+{}
+
+void options::set_parameters_param(string& key, string& value, bool verbose)
+{
+	trim(key);
+	trim(value);
+	transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+	if (     key == "name") {
+		sim_name = value;
+    } 
+    else if (key == "description") {
+		sim_desc = value;
+    }
+    else if (key == "frame_center") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		if (     value == "bary") {
+			fr_cntr = FRAME_CENTER_BARY;
+		}
+		else if (value == "astro") {
+			fr_cntr = FRAME_CENTER_ASTRO;
+		}
+		else {
+			throw nbody_exception("Invalid frame center type: " + value);
+		}
+    }
+    else if (key == "integrator") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		if (value == "e" || value == "euler") {
+			inttype = INTEGRATOR_EULER;
+		}
+		else if (value == "rk2" || value == "rungekutta2")	{
+			inttype = INTEGRATOR_RUNGEKUTTA2;
+		}
+		else if (value == "ork2" || value == "optimizedrungekutta2")	{
+			inttype = INTEGRATOR_OPT_RUNGEKUTTA2;
+		}
+		else if (value == "rk4" || value == "rungekutta4")	{
+			inttype = INTEGRATOR_RUNGEKUTTA4;
+		}
+		else if (value == "rkf78" || value == "rungekuttafehlberg78")	{
+			inttype = INTEGRATOR_RUNGEKUTTAFEHLBERG78;
+		}			
+		else if (value == "ork4" || value == "optimizedrungekutta4")	{
+			inttype = INTEGRATOR_OPT_RUNGEKUTTA4;
+		}
+		else if (value == "rkn" || value == "rungekuttanystrom") {
+			inttype = INTEGRATOR_RUNGEKUTTANYSTROM;
+		}
+		else if (value == "orkn" || value == "optimizedrungekuttanystrom") {
+			inttype = INTEGRATOR_OPT_RUNGEKUTTANYSTROM;
+		}
+		else {
+			throw nbody_exception("Invalid integrator type: " + value);
+		}
+	}
+    else if (key == "tolerance") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		tolerance = atof(value.c_str());
+	}
+    else if (key == "start_time") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		start_time = atof(value.c_str());
+	}
+    else if (key == "length") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		sim_length = atof(value.c_str());
+	}
+    else if (key == "output_interval") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		output_interval = atof(value.c_str());
+	}
+    else if (key == "ejection") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		ejection_dst = atof(value.c_str());
+	}
+    else if (key == "hit_centrum") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		hit_centrunm_dst = atof(value.c_str());
+	}
+    else if (key == "collision_factor") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		collision_factor = atof(value.c_str());
+	}
+	else {
+		throw nbody_exception("Invalid parameter :" + key + ".");
+	}
+
+	if (verbose) {
+		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+	}
+}
+
+void options::load(string& path, string& result)
+{
+	std::ifstream file(path);
+	if (file) {
+		string str;
+		while (std::getline(file, str))
+		{
+			// ignore zero length lines
+			if (str.length() == 0)
+				continue;
+			// ignore comment lines
+			if (str[0] == '#')
+				continue;
+			// delete comment after the value
+			trim_right(str, '#');
+			result += str;
+			result.push_back('\n');
+		} 	
+	}
+	else {
+		throw nbody_exception("The file '" + path + "' could not opened!\r\n");
+	}
+	file.close();
 }
 
 void options::initial_condition(nbody* nb)
@@ -285,9 +481,9 @@ void options::initial_condition(nbody* nb)
 
 //ode* options::create_ode()
 //{
-//	nbody* nb = new nbody(n, timeStart);
+//	nbody* nb = new nbody(n, start_time);
 //
-//	nb->t = timeStart;
+//	nb->t = start_time;
 //	
 //	if (file) {
 //		nb->load(filename, n);
@@ -300,9 +496,9 @@ void options::initial_condition(nbody* nb)
 //
 //nbody*	options::create_nbody()
 //{
-//	nbody*	nb = new nbody(n, timeStart);
+//	nbody*	nb = new nbody(n, start_time);
 //
-//	nb->t = timeStart;
+//	nb->t = start_time;
 //
 //	if (file) {
 //		nb->load(filename, n);
@@ -317,9 +513,9 @@ void options::initial_condition(nbody* nb)
 
 pp_disk*	options::create_pp_disk()
 {
-	pp_disk *ppd = new pp_disk(nBodies, gasDisk, timeStart);
+	pp_disk *ppd = new pp_disk(nBodies, gasDisk, start_time);
 
-	ppd->t = timeStart;
+	ppd->t = start_time;
 
 	if (file) {
 		ppd->load(filename, nBodies->total);

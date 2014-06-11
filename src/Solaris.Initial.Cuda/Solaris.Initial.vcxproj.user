@@ -4,4 +4,8 @@
     <LocalDebuggerCommandArguments>-nBodies 1 1 0 10000 0 100000 0 -o D:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommandArguments>-nBodies 1 0 0 1000 0 0 0 -o C:\Work\Dvorak\Npp1000</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

@@ -18,6 +18,7 @@
 
 // includes project
 #include "config.h"
+#include "file_util.h"
 #include "nbody.h"
 #include "nbody_exception.h"
 #include "ode.h"
@@ -266,81 +267,81 @@ int device_query(int argc, const char **argv)
 
 
 
-static string combine_path(string dir, string filename)
-{
-	if (dir.size() > 0) {
-		if (*(dir.end() - 1) != '/' && *(dir.end() - 1) != '\\') {
-			return dir + '/' + filename;
-		}
-		else {
-			return dir + filename;
-		}
-	}
-	else {
-		return filename;
-	}
-}
-
-static string get_filename(const string& path)
-{
-	string result;
-
-	if (path.size() > 0)
-	{
-		size_t pos = path.find_last_of("/\\");
-		result = path.substr(pos + 1);
-	}
-
-	return result;
-}
-
-static string get_filename_without_ext(const string& path)
-{
-	string result;
-
-	if (path.size() > 0)
-	{
-		size_t pos = path.find_last_of("/\\");
-		result = path.substr(pos + 1);
-		pos = result.find_last_of('.');
-		result = result.substr(0, pos);
-	}
-
-	return result;
-}
-
-static string get_directory(const string& path)
-{
-	string result;
-
-	if (path.size() > 0)
-	{
-		size_t pos = path.find_last_of("/\\");
-		result = path.substr(0, pos);
-	}
-
-	return result;
-}
-
-static string get_extension(const string& path)
-{
-	string result;
-
-	if (path.size() > 0)
-	{
-		size_t pos = path.find_last_of('.');
-		result = path.substr(pos + 1);
-	}
-
-	return result;
-}
-
-static string get_printout_file(options& opt, int pcount)
-{
-	char buffer[1024];
-	sprintf(buffer, "nBodies_1_127_0_0_0_0_0_RK_ppd2_pos-%.5d.txt", pcount);
-	return combine_path(opt.printoutDir, string(buffer));
-}
+//static string combine_path(string dir, string filename)
+//{
+//	if (dir.size() > 0) {
+//		if (*(dir.end() - 1) != '/' && *(dir.end() - 1) != '\\') {
+//			return dir + '/' + filename;
+//		}
+//		else {
+//			return dir + filename;
+//		}
+//	}
+//	else {
+//		return filename;
+//	}
+//}
+//
+//static string get_filename(const string& path)
+//{
+//	string result;
+//
+//	if (path.size() > 0)
+//	{
+//		size_t pos = path.find_last_of("/\\");
+//		result = path.substr(pos + 1);
+//	}
+//
+//	return result;
+//}
+//
+//static string get_filename_without_ext(const string& path)
+//{
+//	string result;
+//
+//	if (path.size() > 0)
+//	{
+//		size_t pos = path.find_last_of("/\\");
+//		result = path.substr(pos + 1);
+//		pos = result.find_last_of('.');
+//		result = result.substr(0, pos);
+//	}
+//
+//	return result;
+//}
+//
+//static string get_directory(const string& path)
+//{
+//	string result;
+//
+//	if (path.size() > 0)
+//	{
+//		size_t pos = path.find_last_of("/\\");
+//		result = path.substr(0, pos);
+//	}
+//
+//	return result;
+//}
+//
+//static string get_extension(const string& path)
+//{
+//	string result;
+//
+//	if (path.size() > 0)
+//	{
+//		size_t pos = path.find_last_of('.');
+//		result = path.substr(pos + 1);
+//	}
+//
+//	return result;
+//}
+//
+//static string get_printout_file(options& opt, int pcount)
+//{
+//	char buffer[1024];
+//	sprintf(buffer, "nBodies_1_127_0_0_0_0_0_RK_ppd2_pos-%.5d.txt", pcount);
+//	return combine_path(opt.printoutDir, string(buffer));
+//}
 
 
 // -nBodies 1 1 0 10000 0 100000 0 -i RKF78 -a 1.0e-10 -t 1000 -dt 10.0 -p 10 10 10 -o C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU -f C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU\nBodies_1_1_0_10000_0_100000_0.txt
@@ -356,8 +357,9 @@ int main(int argc, const char** argv)
 	// Integrate the pp_disk ode
 	try {
 		options opt(argc, argv);
-
+#if 1
 		pp_disk* ppd		= opt.create_pp_disk();
+#endif
 		integrator* intgr	= opt.create_integrator(ppd);
 
 		ttt_t pp			= 0;
@@ -388,7 +390,7 @@ int main(int argc, const char** argv)
 			//orbelemf = new ofstream(combine_path(opt.printoutDir, filenameWithExt), std::ios::app);
 		}
 
-		while (ppd->t < opt.timeStop) {
+		while (ppd->t < opt.stop_time) {
 
 			if (opt.printout) {
 				if (pp >= opt.printoutPeriod) {
@@ -396,14 +398,14 @@ int main(int argc, const char** argv)
 				}
 
 				// Start of a print-out period, create new file if necessary
-				if (pp == 0) {
-					var_t avg_dt = (ppd->t - opt.timeStart) / intgr->get_n_step();
+				if (pp == 0 && intgr->get_n_step() > 0) {
+					var_t avg_dt = (ppd->t - opt.start_time) / intgr->get_n_step();
 					cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
-					cerr << setprecision(5) << setw(6) << ((ppd->t - opt.timeStart)/opt.timeStop*100) << " %" << endl;
+					cerr << setprecision(5) << setw(6) << ((ppd->t - opt.start_time)/opt.stop_time*100) << " %" << endl;
 				}
-				var_t avg_dt = (ppd->t - opt.timeStart) / intgr->get_n_step();
-				cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
-				cerr << setprecision(5) << setw(6) << ((ppd->t - opt.timeStart)/opt.timeStop*100) << " %" << endl;
+				//var_t avg_dt = (ppd->t - opt.start_time) / intgr->get_n_step();
+				//cout << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << ppd->t << " [day]\naverage dt: " << setprecision(10) << setw(16) << avg_dt << " [d]" << endl;
+				//cerr << setprecision(5) << setw(6) << ((ppd->t - opt.start_time)/opt.stop_time*100) << " %" << endl;
 
 				if (0 <= pp && pp <= opt.printoutLength) {
 					if (ps >= opt.printoutStep) {
@@ -412,14 +414,15 @@ int main(int argc, const char** argv)
 
 					if (ps == 0) {
 						// Print out positions
-						//ppd->copy_to_host();
-						//ppd->print_positions(*positionsf);
+						ppd->copy_to_host();
+						ppd->print_positions(*positionsf);
 						//pp_disk::h_orbelem_t orbelem = ppd->calculate_orbelem(0);
 						//ppd->print_orbelem(*orbelemf);
 					}
 				}
 			}
 			dt = intgr->step();
+			cerr << "t: " << setw(15) << (ppd->t) << ", dt: " << setw(15) << dt << " [d]" << endl;
 
 			pp += dt;
 			ps += dt;

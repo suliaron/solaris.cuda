@@ -607,25 +607,25 @@ int main(int argc, const char** argv)
 	string dev_str = (dev_t == CPU ? "CPU_" : "GPU_");
 
 	{
-		string outDir = "C:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
-		string filename = "gravity_acceleration_on_" + dev_str;
-		filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
-		string path = combine_path(outDir, filename);
-		ofstream data(path.c_str(), std::ofstream::app);
-		if (!data.is_open())
-		{
-			cerr << "Unable to open file: " << path << "!\n";
-			return 0;
-		}
-		cout << "NUMBER_OF_ITERATION ";
-		data << "NUMBER_OF_ITERATION ";
-		for (int j = 0; j < PP_DISK_KERNEL_N; j++)
-		{
-			cout << pp_disk::kernel_name[j] << " ";
-			data << pp_disk::kernel_name[j] << " ";
-		}
-		cout << endl;
-		data << endl;
+		//string outDir = "C:\\Work\\Projects\\solaris.cuda\\PerformanceTest\\Release";
+		//string filename = "gravity_acceleration_on_" + dev_str;
+		//filename += "nBodies_" + create_number_of_bodies_str(nBodies) + ".txt";
+		//string path = combine_path(outDir, filename);
+		//ofstream data(path.c_str(), std::ofstream::app);
+		//if (!data.is_open())
+		//{
+		//	cerr << "Unable to open file: " << path << "!\n";
+		//	return 0;
+		//}
+		//cout << "NUMBER_OF_ITERATION ";
+		//data << "NUMBER_OF_ITERATION ";
+		//for (int j = 0; j < PP_DISK_KERNEL_N; j++)
+		//{
+		//	cout << pp_disk::kernel_name[j] << " ";
+		//	data << pp_disk::kernel_name[j] << " ";
+		//}
+		//cout << endl;
+		//data << endl;
 
 		var_t* elapsed = new var_t[PP_DISK_KERNEL_N];
 
@@ -635,17 +635,17 @@ int main(int argc, const char** argv)
 			clear_array(PP_DISK_KERNEL_N, elapsed);
 			compute_gravity_acceleration(nBodies_copy, i, dev_t, elapsed);
 
-			cout << setw(10) << i << " " ;
-			data << setw(10) << i << " " ;
-			for (int j = 0; j < PP_DISK_KERNEL_N; j++)
-			{
-				cout << setw(10) << elapsed[j] / (var_t)i << " ";
-				data << setw(10) << elapsed[j] / (var_t)i << " ";
-			}
-			cout << endl;
-			data << endl;
+			//cout << setw(10) << i << " " ;
+			//data << setw(10) << i << " " ;
+			//for (int j = 0; j < PP_DISK_KERNEL_N; j++)
+			//{
+			//	cout << setw(10) << elapsed[j] / (var_t)i << " ";
+			//	data << setw(10) << elapsed[j] / (var_t)i << " ";
+			//}
+			//cout << endl;
+			//data << endl;
 		}
-		data.close();
+		//data.close();
 		delete elapsed;
 	}
 

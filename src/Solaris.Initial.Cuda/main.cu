@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 
+// includes, project
 #include "constants.h"
 #include "number_of_bodies.h"
 
@@ -800,6 +801,71 @@ int generate_pp_disk(string path, var2_t disk, number_of_bodies *nBodies)
 	return 0;
 }
 
+int generate_Dvorak_disk(string path, var2_t disk, number_of_bodies *nBodies)
+{
+	var_t t = 0.0;
+	int_t bodyId = 0;
+
+	var_t mCeres		= 9.43e20;	// kg
+	var_t mMoon			= 9.43e20;	// kg
+	var_t rhoBasalt		= 2.7;		// g / cm^3
+	
+	param_t param0;
+	param_t param;
+	vec_t	rVec = {0.0, 0.0, 0.0, 0.0};
+	vec_t	vVec = {0.0, 0.0, 0.0, 0.0};
+
+	std::ofstream	output;
+	output.open(path, std::ios_base::app);
+
+	// Output central mass
+	for (int i = 0; i < nBodies->star; i++, bodyId++)
+	{
+		param0.id = bodyId;
+		param0.mass = 1.0;
+		param0.radius = Constants::SolarRadiusToAu;
+		param0.density = calculate_density(param0.mass, param0.radius);
+		param0.cd = 0.0;
+		param0.migType = NO;
+		param0.migStopAt = 0.0;
+		print_body_record(output, bodyId, t, &param0, &rVec, &vVec);
+	}
+
+	srand ((unsigned int)time(0));
+	orbelem oe;
+	// Output proto planets
+	for (int i = 0; i < nBodies->proto_planet; i++, bodyId++)
+	{
+		oe.sma = generate_random(disk.x, disk.y, pdf_const);
+		oe.ecc = generate_random(0.0, 0.3, pdf_const);
+		oe.inc = 0.0;
+		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
+		oe.node = 0.0;
+		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
+
+		param.id = bodyId;
+		param.mass = generate_random(mCeres, mMoon / 10.0, pdf_const) * Constants::KilogramToSolar;
+		param.density = rhoBasalt * Constants::GramPerCm3ToSolarPerAu3;
+		param.radius = calculate_radius(param.mass, param.density);
+		param.cd = 0.0;
+		param.migType = NO;
+		param.migStopAt = 0.0;
+
+		var_t mu = K2*(param0.mass + param.mass);
+		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
+		if (ret_code == 1) {
+			cerr << "Could not calculate the phase." << endl;
+			return ret_code;
+		}
+		print_body_record(output, bodyId, t, &param, &rVec, &vVec);
+	}
+
+	output.flush();
+	output.close();
+
+	return 0;
+}
+
 int generate_2_body(string filename, int n)
 {
 	var_t m0, m1;
@@ -904,8 +970,12 @@ int main(int argc, const char **argv)
 	//var2_t disk = {5.0, 6.0};	// AU
 	//retCode = generate_pp_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
 
-	var2_t disk = {65, 270};
-	retCode = generate_Rezso_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
-	
+	//var2_t disk = {65, 270};
+	//retCode = generate_Rezso_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
+
+	// Generate Dvorak disk
+	var2_t disk = {0.9, 2.5};	// AU
+	retCode = generate_Dvorak_disk(combine_path(outDir, ("DvorakDisk01_" + nbstr + ".txt")), disk, nBodies);
+
 	return retCode;
 }

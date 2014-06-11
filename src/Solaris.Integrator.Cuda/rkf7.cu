@@ -312,9 +312,6 @@ void rkf7::call_calc_ytemp_for_fr_kernel(int r)
 			f11	= d_f[i][11].data().get();
 		}
 
-#ifdef TIMER
-		tmr.cuda_start();
-#endif
 		switch (r) {
 		case 1:
 			idx = 1;		
@@ -369,10 +366,6 @@ void rkf7::call_calc_ytemp_for_fr_kernel(int r)
 			msg << r+1 << "!";
 			throw integrator_exception(msg.str());
 		}
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "call_calc_ytemp_for_fr_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 		cudaError cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			ostringstream msg("call_calc_ytemp_for_f", ostringstream::ate);
@@ -391,14 +384,7 @@ void rkf7::call_calc_yscale_kernel()
 		var_t *f0	 = d_f[i][0].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
-#ifdef TIMER
-		tmr.cuda_start();
-#endif
 		calc_yscale_kernel<<<grid, block>>>(n, yscale, dt_try, y_n, f0);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "call_calc_yscale_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 		cudaError cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw integrator_exception("calc_yscale_kernel failed");
@@ -417,14 +403,7 @@ void rkf7::call_calc_error_kernel()
 		var_t *f12  = d_f[i][12].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
-#ifdef TIMER
-		tmr.cuda_start();
-#endif
 		calc_error_kernel<<<grid, block>>>(n, err, f0, f10, f11, f12);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "call_calc_error_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 		cudaError cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw integrator_exception("calc_error_kernel failed");
@@ -444,14 +423,7 @@ void rkf7::call_calc_scalederror_kernel()
 		var_t *f12  = d_f[i][12].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
-#ifdef TIMER
-		tmr.cuda_start();
-#endif
 		calc_scalederror_kernel<<<grid, block>>>(n, err, dt_try, yscale, f0, f10, f11, f12);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "call_calc_scalederror_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 		cudaError cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw integrator_exception("calc_scalederror_kernel failed");
@@ -474,14 +446,7 @@ void rkf7::call_calc_y_np1_kernel()
 		var_t *f10   = d_f[i][10].data().get();
 
 		calculate_grid(n, THREADS_PER_BLOCK);
-#ifdef TIMER
-		tmr.cuda_start();
-#endif
 		calc_y_np1_kernel<<<grid, block>>>(n, y_np1, dt_try, y_n, f0, f5, f6, f7, f8, f9, f10, b[0], b[5], b[6], b[7], b[8], b[9], b[10]);
-#ifdef TIMER
-		tmr.cuda_stop();
-		cout << setw(50) << "call_calc_y_np1_kernel() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 		cudaError cudaStatus = HANDLE_ERROR(cudaGetLastError());
 		if (cudaSuccess != cudaStatus) {
 			throw integrator_exception("calc_y_np1_kernel failed");
@@ -550,22 +515,8 @@ ttt_t rkf7::step()
 			call_calc_scalederror_kernel();
 			//max_err = fabs(std::max(max_vec(d_err[0]), max_vec(d_err[1]))) / tolerance;
 
-#ifdef TIMER
-			tmr.cuda_start();
-#endif
 			var_t max_1 = *thrust::max_element(d_err[0].begin(), d_err[0].end()) / tolerance;
-#ifdef TIMER
-			tmr.cuda_stop();
-			cout << setw(50) << "thrust::max_element() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
-#ifdef TIMER
-			tmr.cuda_start();
-#endif
 			var_t max_2 = *thrust::max_element(d_err[1].begin(), d_err[1].end()) / tolerance;
-#ifdef TIMER
-			tmr.cuda_stop();
-			cout << setw(50) << "thrust::max_element() took " << setw(20) << tmr.cuda_ellapsed_time() << " [ms]" << endl;
-#endif
 			max_err = fabs(std::max(max_1, max_2));
 
 			// The step failed, the required accuracy was not reached
