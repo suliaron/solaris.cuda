@@ -6,6 +6,9 @@
 
 gas_disk::gas_disk() 
 {
+	name = "Default gas disk";
+	desc = "Default gas disk with constant gas density";
+
 	gas_decrease = GAS_DENSITY_CONSTANT;
 	t0 = 0.0;
 	t1 = 0.0;
@@ -78,6 +81,8 @@ var_t	gas_disk::reduction_factor(ttt_t t)
 
 std::ostream& operator<<(std::ostream& output, gas_disk gasDisk)
 {
+	output << "name: " << gasDisk.name << std::endl;
+	output << "desc: " << gasDisk.desc << std::endl;
 	output << "eta: " << gasDisk.eta.x << ", " << gasDisk.eta.y << std::endl;
 	output << "rho: " << gasDisk.rho.x << ", " << gasDisk.rho.y << std::endl;
 	output << "sch: " << gasDisk.sch.x << ", " << gasDisk.sch.y << std::endl;

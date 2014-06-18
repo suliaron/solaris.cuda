@@ -1,6 +1,9 @@
 #pragma once
+#include <string>
 
 #include "config.h"
+
+using namespace std;
 
 typedef enum gas_decrease
 		{ 
@@ -12,6 +15,9 @@ typedef enum gas_decrease
 class gas_disk
 {
 public:
+	//! The decrease type for the gas density
+	string	name;
+	string	desc;
 	//! The decrease type for the gas density
 	gas_decrease_t gas_decrease;
 

@@ -27,7 +27,8 @@ options::options(int argc, const char** argv)
 	parse_options(argc, argv);
 	if (parameters_path.length() > 0) {
 		load(parameters_path, parameters_str);
-		parse_parameters();
+		parse_params(set_parameters_param);
+		//parse_parameters();
 	}
 	if (gasDisk_path.length() > 0) {
 		load(gasDisk_path, gasDisk_str);
@@ -67,6 +68,9 @@ void options::print_usage()
 {
 	cout << "Usage: CudaNBody <parameterlis>" << endl;
 	cout << "Parameters:" << endl;
+	cout << "     -ip <path>         : the file containig the parameters of the simulation"  << endl;
+	cout << "     -igd <path>        : the file containig the parameters of the gas disk"  << endl;
+	cout << "     -ibl <path>        : the file containig the bodylist with their initial conditions"  << endl;
 	cout << "     -n <number>        : Number of self-interacting bodies" << endl;
 	cout << "     -nBodies <nStar> <nGP> <nRP> <nPP> <nSP> <nPl> <nTP> : Number of bodies" << endl;
 	cout << "     -i <type>          : Integrator type" << endl;
@@ -78,7 +82,7 @@ void options::print_usage()
 	cout << "                          RK2  : 2nd order Runge-Kutta" << endl;
 	cout << "                          RK4  : 4th order Runge-Kutta" << endl;
 	cout << "                          RKN  : Runge-Kutta-Nystrom" << endl;
-	cout << "     -gas          : Embed the planets into a gas disk" << endl;
+	cout << "     -gasDefault   : Embed the planets into a gas disk with default values" << endl;
 	cout << "     -a <number>   : Use adaptive time step with <number> as tolerance" << endl;
 	cout << "     -t0 <number>  : Start time " << endl;
 	cout << "     -t <number>   : Stop time " << endl;
@@ -103,6 +107,7 @@ void options::parse_options(int argc, const char** argv)
 			parameters_path = argv[i];
 		}
 		else if (p == "-igd") {
+			gasDisk = new gas_disk;
 			i++;
 			gasDisk_path = argv[i];
 		}
@@ -120,7 +125,6 @@ void options::parse_options(int argc, const char** argv)
 			}
 		}
 
-
 		else if (p == "-nBodies") {
 			i++;
 			int	star				= atoi(argv[i++]);
@@ -133,7 +137,8 @@ void options::parse_options(int argc, const char** argv)
 			this->nBodies = new number_of_bodies(star, giant_planet, rocky_planet, proto_planet, super_planetesimal, planetesimal, test_particle);
 		}
 		// Initialize a gas_disk object with default values
-		else if (p == "-gas") {
+		else if (p == "-gasDefault") {
+			delete gasDisk;
 			gasDisk = new gas_disk;
 		}
 		// Integrator type
@@ -226,6 +231,39 @@ void options::parse_options(int argc, const char** argv)
 	}
 }
 
+void options::parse_params(void (options::*setter)(string& key, string& value, bool verbose))
+{
+	// instantiate Tokenizer classes
+	Tokenizer fileTokenizer;
+	Tokenizer lineTokenizer;
+	string line;
+
+	fileTokenizer.set(parameters_str, "\n");
+	while ((line = fileTokenizer.next()) != "") {
+		lineTokenizer.set(line, "=");
+		string token;
+		int tokenCounter = 1;
+
+		string key; 
+		string value;
+		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
+
+			if (tokenCounter == 1)
+				key = token;
+			else if (tokenCounter == 2)
+				value = token;
+
+			tokenCounter++;
+		}
+		if (tokenCounter > 2) {
+			setter(key, value, true);
+		}
+		else {
+			throw nbody_exception("Invalid key/value pair: " + line + ".");
+		}
+	}
+}
+
 void options::parse_parameters()
 {
 	// instantiate Tokenizer classes
@@ -260,7 +298,8 @@ void options::parse_parameters()
 }
 
 void options::parse_gasdisk()
-{}
+{
+}
 
 void options::set_parameters_param(string& key, string& value, bool verbose)
 {
@@ -316,6 +355,20 @@ void options::set_parameters_param(string& key, string& value, bool verbose)
 			throw nbody_exception("Invalid integrator type: " + value);
 		}
 	}
+    else if (key == "adaptive") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		bool b = false;
+		if (     value == "true") {
+			b = true;
+		}
+		else if (value == "false")  {
+			b = false;
+		}
+		else {
+			throw nbody_exception("Invalid value at: " + key);
+		}
+		adaptive = b;
+	}
     else if (key == "tolerance") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
@@ -358,6 +411,87 @@ void options::set_parameters_param(string& key, string& value, bool verbose)
 		}
 		collision_factor = atof(value.c_str());
 	}
+	else {
+		throw nbody_exception("Invalid parameter :" + key + ".");
+	}
+
+	if (verbose) {
+		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+	}
+}
+
+void options::set_gasdisk_param(string& key, string& value, bool verbose)
+{
+	trim(key);
+	trim(value);
+	transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+	if (     key == "name") {
+		gasDisk->name = value;
+    } 
+    else if (key == "description") {
+		gasDisk->desc = value;
+    }
+
+	else if (key == "alpha") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->alpha = atof(value.c_str());
+	}
+
+	else if (key == "eta_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->eta.x = atof(value.c_str());
+	}
+    else if (key == "eta_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->eta.y = atof(value.c_str());
+	}
+
+    else if (key == "rho_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->rho.x = atof(value.c_str());
+	}
+    else if (key == "rho_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->rho.y = atof(value.c_str());
+	}
+
+    else if (key == "sch_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->sch.x = atof(value.c_str());
+	}
+    else if (key == "sch_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->sch.y = atof(value.c_str());
+	}
+
+    else if (key == "tau_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->tau.x = atof(value.c_str());
+	}
+    else if (key == "tau_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->tau.y = atof(value.c_str());
+	}
+
 	else {
 		throw nbody_exception("Invalid parameter :" + key + ".");
 	}

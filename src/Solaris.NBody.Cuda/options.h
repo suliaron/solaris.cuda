@@ -111,6 +111,7 @@ public:
 private:
 	void create_default_options();
 	void parse_options(int argc, const char** argv);
+	void parse_params(void (options::*setter)(string& key, string& value, bool verbose));
 	void parse_parameters();
 	void parse_gasdisk();
 	void load(string& path, string& result);
