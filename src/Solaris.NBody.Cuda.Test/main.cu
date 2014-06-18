@@ -57,7 +57,6 @@ inline void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, 
     }
 }
 
-
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
 #ifdef _WIN32
@@ -262,86 +261,6 @@ int device_query(int argc, const char **argv)
     return (EXIT_SUCCESS);
 }
 
-
-///////////////////////////////
-
-
-
-//static string combine_path(string dir, string filename)
-//{
-//	if (dir.size() > 0) {
-//		if (*(dir.end() - 1) != '/' && *(dir.end() - 1) != '\\') {
-//			return dir + '/' + filename;
-//		}
-//		else {
-//			return dir + filename;
-//		}
-//	}
-//	else {
-//		return filename;
-//	}
-//}
-//
-//static string get_filename(const string& path)
-//{
-//	string result;
-//
-//	if (path.size() > 0)
-//	{
-//		size_t pos = path.find_last_of("/\\");
-//		result = path.substr(pos + 1);
-//	}
-//
-//	return result;
-//}
-//
-//static string get_filename_without_ext(const string& path)
-//{
-//	string result;
-//
-//	if (path.size() > 0)
-//	{
-//		size_t pos = path.find_last_of("/\\");
-//		result = path.substr(pos + 1);
-//		pos = result.find_last_of('.');
-//		result = result.substr(0, pos);
-//	}
-//
-//	return result;
-//}
-//
-//static string get_directory(const string& path)
-//{
-//	string result;
-//
-//	if (path.size() > 0)
-//	{
-//		size_t pos = path.find_last_of("/\\");
-//		result = path.substr(0, pos);
-//	}
-//
-//	return result;
-//}
-//
-//static string get_extension(const string& path)
-//{
-//	string result;
-//
-//	if (path.size() > 0)
-//	{
-//		size_t pos = path.find_last_of('.');
-//		result = path.substr(pos + 1);
-//	}
-//
-//	return result;
-//}
-//
-//static string get_printout_file(options& opt, int pcount)
-//{
-//	char buffer[1024];
-//	sprintf(buffer, "nBodies_1_127_0_0_0_0_0_RK_ppd2_pos-%.5d.txt", pcount);
-//	return combine_path(opt.printoutDir, string(buffer));
-//}
 
 
 // -nBodies 1 1 0 10000 0 100000 0 -i RKF78 -a 1.0e-10 -t 1000 -dt 10.0 -p 10 10 10 -o C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU -f C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU\nBodies_1_1_0_10000_0_100000_0.txt

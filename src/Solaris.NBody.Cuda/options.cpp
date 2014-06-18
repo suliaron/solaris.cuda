@@ -127,14 +127,14 @@ void options::parse_options(int argc, const char** argv)
 
 		else if (p == "-nBodies") {
 			i++;
-			int	star				= atoi(argv[i++]);
-			int	giant_planet		= atoi(argv[i++]);
-			int	rocky_planet		= atoi(argv[i++]);
-			int	proto_planet		= atoi(argv[i++]);
-			int	super_planetesimal	= atoi(argv[i++]);
-			int	planetesimal		= atoi(argv[i++]);
-			int	test_particle		= atoi(argv[i]);
-			this->nBodies = new number_of_bodies(star, giant_planet, rocky_planet, proto_planet, super_planetesimal, planetesimal, test_particle);
+			int	ns		= atoi(argv[i++]);
+			int	ngp		= atoi(argv[i++]);
+			int	nrp		= atoi(argv[i++]);
+			int	npp		= atoi(argv[i++]);
+			int	nspl	= atoi(argv[i++]);
+			int	npl		= atoi(argv[i++]);
+			int	ntp		= atoi(argv[i]);
+			this->nBodies = new number_of_bodies(ns, ngp, nrp, npp, nspl, npl, ntp);
 		}
 		// Initialize a gas_disk object with default values
 		else if (p == "-gasDefault") {
@@ -526,6 +526,29 @@ void options::load(string& path, string& result)
 	file.close();
 }
 
+void options::load(string& path)
+{
+	ifstream input(path.c_str());
+	if (input) 
+	{
+		int ns, ngp, nrp, npp, nspl, npl, ntp;
+		ns = ngp = nrp = npp = nspl = npl = ntp = 0;
+		input >> ns;
+		input >> ngp;
+		input >> nrp;
+		input >> npp;
+		input >> nspl;
+		input >> npl;
+		input >> ntp;
+		this->nBodies = new number_of_bodies(ns, ngp, nrp, npp, nspl, npl, ntp);
+	}
+	else 
+	{
+		throw nbody_exception("Cannot open " + path + ".");
+	}
+	input.close();
+}
+
 void options::initial_condition(nbody* nb)
 {
 	vec_t*	coor = (vec_t*)nb->h_y[0].data();
@@ -647,16 +670,27 @@ void options::initial_condition(nbody* nb)
 
 pp_disk*	options::create_pp_disk()
 {
-	pp_disk *ppd = new pp_disk(nBodies, gasDisk, start_time);
+	pp_disk *ppd = 0;
 
+	if (this->bodylist_path.length() > 0)
+	{
+		// set the nBodies field using the data in the bodylist_path
+		load(bodylist_path);
+		ppd = new pp_disk(nBodies, gasDisk, start_time);
+		ppd->load(bodylist_path);
+	}
+	else
+	{
+		ppd = new pp_disk(nBodies, gasDisk, start_time);
+		if (file) {
+			ppd->load(filename, nBodies->total);
+		}
+		else {
+			throw nbody_exception("file is missing!");
+		}
+	}
 	ppd->t = start_time;
 
-	if (file) {
-		ppd->load(filename, nBodies->total);
-	}
-	else {
-		;
-	}
 	ppd->transform_to_bc();
 	ppd->copy_to_device();
 

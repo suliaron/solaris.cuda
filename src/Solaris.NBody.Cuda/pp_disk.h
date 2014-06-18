@@ -21,6 +21,17 @@ typedef enum migration_type
 	MIGRATION_TYPE_TYPE_II
 } migration_type_t;
 
+typedef enum body_type
+{
+	BODY_TYPE_STAR,
+	BODY_TYPE_GIANTPLANET,
+	BODY_TYPE_ROCKYPLANET,
+	BODY_TYPE_PROTOPLANET,
+	BODY_TYPE_SUPERPLANETESIMAL,
+	BODY_TYPE_PLANETESIMAL,
+	BODY_TYPE_TESTPARTICLE
+} body_type_t;
+
 #ifdef STOP_WATCH
 typedef enum pp_disk_kernel
 {
@@ -59,15 +70,21 @@ public:
 	{
 		//! Unique number to identify the object
 		int_t id;
+		//! Type of the body
+		body_type_t body_type;
+		//! Indicates whether the body is participating in the simulation or not (i.e. escaped)
+		bool_t active;
+		//! The initial conditions are valid for this epoch
+		var_t epoch;
 		//! Mass of body in M_sol
 		var_t mass;
 		//! Radius of body in AU
 		var_t radius;
 		//! Density of body in M_sol AU-3
 		var_t density;
-		//! Used for the drag force  TODO
+		//! Used for the drag force
 		var_t gamma_stokes;
-		//! Used for the drag force  TODO
+		//! Used for the drag force
 		var_t gamma_epstein;
 		//! Type of the migration
 		migration_type_t migType;
@@ -107,7 +124,8 @@ public:
 
 	void calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy);
 
-	void load(string filename, int n);
+	void load(string path, int n);
+	void load(string path);
 	void generate_rand(var2_t disk);
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);

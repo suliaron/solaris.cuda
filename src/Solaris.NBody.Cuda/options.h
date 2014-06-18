@@ -92,7 +92,7 @@ public:
 	//! the ejection distance: beyond this limit the body is removed from the simulation [AU]
 	var_t	ejection_dst;
 	//! the hit centrum distance: inside this limit the body is considered to have hitted the central body and removed from the simulation [AU]
-	var_t	hit_centrunm_dst;
+	var_t	hit_centrum_dst;
 	//! two bodies collide when their mutual distance is smaller than the sum of their radii multiplied by this number. Real physical collision corresponds to the value of 1.0.
 	var_t	collision_factor;
 
@@ -115,6 +115,7 @@ private:
 	void parse_parameters();
 	void parse_gasdisk();
 	void load(string& path, string& result);
+	void load(string& path);
 
 	void set_parameters_param(string& key, string& value, bool verbose);
 	void set_gasdisk_param(string& key, string& value, bool verbose);

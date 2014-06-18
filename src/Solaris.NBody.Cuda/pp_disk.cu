@@ -1224,15 +1224,15 @@ void pp_disk::transform_to_bc()
 	cout << " ... finished" << endl;
 }
 
-void pp_disk::load(string filename, int n)
+void pp_disk::load(string path, int n)
 {
-	cout << "Loading position started";
+	cout << "Loading " << path << " ... ";
 
 	vec_t* coor = (vec_t*)h_y[0].data();
 	vec_t* velo = (vec_t*)h_y[1].data();
 	param_t* param = (param_t*)h_p.data();
 
-	ifstream input(filename.c_str());
+	ifstream input(path.c_str());
 
 	if (input) {
 		int_t	migType = 0;
@@ -1264,10 +1264,86 @@ void pp_disk::load(string filename, int n)
         input.close();
 	}
 	else {
-		throw nbody_exception("Cannot open file.");
+		throw nbody_exception("Cannot open " + path + ".");
 	}
 
-	cout << " ... finished" << endl;
+	cout << "done" << endl;
+}
+
+void pp_disk::load(string path)
+{
+	cout << "Loading " << path << " ... ";
+
+	ifstream input(path.c_str());
+	if (input) 
+	{
+		int ns, ngp, nrp, npp, nspl, npl, ntp;
+		ns = ngp = nrp = npp = nspl = npl = ntp = 0;
+		input >> ns;
+		input >> ngp;
+		input >> nrp;
+		input >> npp;
+		input >> nspl;
+		input >> npl;
+		input >> ntp;
+	}
+	else 
+	{
+		throw nbody_exception("Cannot open " + path + ".");
+	}
+
+	vec_t* coor = (vec_t*)h_y[0].data();
+	vec_t* velo = (vec_t*)h_y[1].data();
+	param_t* param = (param_t*)h_p.data();
+
+	if (input) {
+		int_t	type = 0;
+		var_t	cd = 0.0;
+		string	dummy;
+        		
+		for (int i = 0; i < nBodies->total; i++) { 
+			// id
+			input >> param[i].id;
+			// name (discard it)
+			input >> dummy;
+			// body type
+			input >> type;
+			param[i].body_type = static_cast<body_type_t>(type);
+			// epoch
+			input >> param[i].epoch;
+
+			// position
+			input >> coor[i].x;
+			input >> coor[i].y;
+			input >> coor[i].z;
+			// velocity
+			input >> velo[i].x;
+			input >> velo[i].y;
+			input >> velo[i].z;
+			// mass
+			input >> param[i].mass;
+			// radius
+			input >> param[i].radius;
+			// density
+			input >> param[i].density;
+			// stokes constant
+			input >> cd;
+			param[i].gamma_stokes = calculate_gamma_stokes(cd, param[i].density, param[i].radius);
+			param[i].gamma_epstein = calculate_gamma_epstein(param[i].density, param[i].radius);
+
+			// migration type
+			input >> type;
+			param[i].migType = static_cast<migration_type_t>(type);
+			// migration stop at
+			input >> param[i].migStopAt;
+        }
+        input.close();
+	}
+	else {
+		throw nbody_exception("Cannot open " + path + ".");
+	}
+
+	cout << "done" << endl;
 }
 
 void pp_disk::generate_rand(var2_t disk)
@@ -1478,7 +1554,7 @@ void pp_disk::generate_rand(var2_t disk)
 // Print body positions
 int pp_disk::print_positions(ostream& sout)
 {
-	cout << "Printing position started";
+	cout << "Printing position ... ";
 
 	param_t* h_param = (param_t*)h_p.data();
 	vec_t* h_coord = (vec_t*)h_y[0].data();
@@ -1501,7 +1577,7 @@ int pp_disk::print_positions(ostream& sout)
 		sout << endl;
 	}
 
-	cout << " ... finished" << endl;
+	cout << "done" << endl;
 
 	return 0;
 }
@@ -1509,7 +1585,7 @@ int pp_disk::print_positions(ostream& sout)
 // Print body orbital elements
 int pp_disk::print_orbelem(ostream& sout)
 {
-	cout << "Printing orbital elements started";
+	cout << "Printing orbital elements ... ";
 
 	param_t *h_param = (param_t*)h_p.data();
 	orbelem_t *oe	 = (orbelem_t*)h_orbelem.data();
@@ -1531,7 +1607,7 @@ int pp_disk::print_orbelem(ostream& sout)
 		sout << endl;
 	}
 
-	cout << " ... finished" << endl;
+	cout << "done" << endl;
 
 	return 0;
 }
