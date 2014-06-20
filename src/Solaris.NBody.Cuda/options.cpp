@@ -27,7 +27,7 @@ options::options(int argc, const char** argv)
 	parse_options(argc, argv);
 	if (parameters_path.length() > 0) {
 		load(parameters_path, parameters_str);
-		parse_params(set_parameters_param);
+		//parse_params(set_parameters_param);
 		//parse_parameters();
 	}
 	if (gasDisk_path.length() > 0) {
@@ -231,38 +231,38 @@ void options::parse_options(int argc, const char** argv)
 	}
 }
 
-void options::parse_params(void (options::*setter)(string& key, string& value, bool verbose))
-{
-	// instantiate Tokenizer classes
-	Tokenizer fileTokenizer;
-	Tokenizer lineTokenizer;
-	string line;
-
-	fileTokenizer.set(parameters_str, "\n");
-	while ((line = fileTokenizer.next()) != "") {
-		lineTokenizer.set(line, "=");
-		string token;
-		int tokenCounter = 1;
-
-		string key; 
-		string value;
-		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
-
-			if (tokenCounter == 1)
-				key = token;
-			else if (tokenCounter == 2)
-				value = token;
-
-			tokenCounter++;
-		}
-		if (tokenCounter > 2) {
-			setter(key, value, true);
-		}
-		else {
-			throw nbody_exception("Invalid key/value pair: " + line + ".");
-		}
-	}
-}
+//void options::parse_params(void (options::*setter)(string& key, string& value, bool verbose))
+//{
+//	// instantiate Tokenizer classes
+//	Tokenizer fileTokenizer;
+//	Tokenizer lineTokenizer;
+//	string line;
+//
+//	fileTokenizer.set(parameters_str, "\n");
+//	while ((line = fileTokenizer.next()) != "") {
+//		lineTokenizer.set(line, "=");
+//		string token;
+//		int tokenCounter = 1;
+//
+//		string key; 
+//		string value;
+//		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
+//
+//			if (tokenCounter == 1)
+//				key = token;
+//			else if (tokenCounter == 2)
+//				value = token;
+//
+//			tokenCounter++;
+//		}
+//		if (tokenCounter > 2) {
+//			setter(key, value, true);
+//		}
+//		else {
+//			throw nbody_exception("Invalid key/value pair: " + line + ".");
+//		}
+//	}
+//}
 
 void options::parse_parameters()
 {
@@ -403,7 +403,7 @@ void options::set_parameters_param(string& key, string& value, bool verbose)
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		hit_centrunm_dst = atof(value.c_str());
+		hit_centrum_dst = atof(value.c_str());
 	}
     else if (key == "collision_factor") {
 		if (!is_number(value)) {

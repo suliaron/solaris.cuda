@@ -108,6 +108,8 @@ public:
 		var_t mean;
 	} orbelem_t;
 
+	vector<string>								body_names;
+
 	typedef thrust::host_vector<param_t>		h_param_t;
 	typedef thrust::device_vector<param_t>		d_param_t;
 
