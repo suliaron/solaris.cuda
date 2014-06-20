@@ -29,8 +29,29 @@ typedef enum body_type
 	BODY_TYPE_PROTOPLANET,
 	BODY_TYPE_SUPERPLANETESIMAL,
 	BODY_TYPE_PLANETESIMAL,
-	BODY_TYPE_TESTPARTICLE
+	BODY_TYPE_TESTPARTICLE,
+	BODY_TYPE_N
 } body_type_t;
+
+typedef enum orbelem_name
+		{
+			SMA,
+			ECC,
+			INC,
+			PERI,
+			NODE,
+			MEAN
+		} orbelem_name_t;
+
+typedef enum phys_prop_name
+		{
+			MASS,
+			RADIUS,
+			DENSITY,
+			DRAG_COEFF
+		} phys_prop_name_t;
+
+string body_type_names[] = {"star", "giant", "rocky", "proto", "superpl", "pl", "testp"}; 
 
 #ifdef STOP_WATCH
 typedef enum pp_disk_kernel
@@ -82,6 +103,8 @@ public:
 		var_t radius;
 		//! Density of body in M_sol AU-3
 		var_t density;
+		//! Drag coefficient for the Stokes-type drag
+		var_t cd;
 		//! Used for the drag force
 		var_t gamma_stokes;
 		//! Used for the drag force
