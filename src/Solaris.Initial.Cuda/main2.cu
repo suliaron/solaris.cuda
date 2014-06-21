@@ -386,16 +386,18 @@ int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_ver
 		{
 			if (body_type == BODY_TYPE_STAR)
 			{
-				param0.body_type = BODY_TYPE_STAR;
 				param0.id = bodyId;
+				param0.body_type = BODY_TYPE_STAR;
 
 				generate_pp(body_disk.pp_r[body_type], param0);
-				param0.migType = MIGRATION_TYPE_NO;
-				param0.migStopAt = 0.0;
 
-				convert << i;			// insert the textual representation of 'i' in the characters in the stream
+                convert << i;			// insert the textual representation of 'i' in the characters in the stream
 				i_str = convert.str();  // set 'i_str' to the contents of the stream
 				name = body_type_names[body_type] + i_str;
+
+                param0.migType = MIGRATION_TYPE_NO;
+				param0.migStopAt = 0.0;
+
 
 				print_body_record(output, name, t, &param0, &rVec, &vVec, o_version);
 			} /* if */
