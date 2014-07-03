@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <vector>
 
 // includes, project
 #include "constants.h"
@@ -62,9 +63,12 @@ typedef struct phys_prop_range
 
 typedef struct body_disk
 		{
+			vector<string>		names;
 			int_t				nBody[BODY_TYPE_N];
 			oe_range_t			oe_r[BODY_TYPE_N];
 			phys_prop_range_t	pp_r[BODY_TYPE_N];
+			migration_type_t	*mig_type;
+			var_t				*stop_at;
 		} body_disk_t;
 
 
@@ -104,18 +108,10 @@ var_t pdf_const(var_t x)
 	return 1;
 }
 
-//var_t calculate_radius(var_t m)
-//{
-//	var_t V = m * MASS_SUN / DENSITY;	// m3
-//	V /= AU * AU * AU;		// AU3
-//	
-//	return pow(3.0 / 4.0 / PI * V, 1.0 / 3.0);
-//}
-
 #define FOUR_PI_OVER_THREE	4.1887902047863909846168578443727
 var_t calculate_radius(var_t m, var_t density)
 {
-	return pow(1.0/FOUR_PI_OVER_THREE * m/density ,1.0/3.0);
+	return pow(1.0/FOUR_PI_OVER_THREE * m/density, 1.0/3.0);
 }
 
 var_t calculate_density(var_t m, var_t R)
@@ -195,7 +191,7 @@ int_t	calculate_phase(var_t mu, const pp_disk::orbelem_t* oe, vec_t* rVec, vec_t
 }
 
 
-void print_body_record(std::ofstream &output, string name, var_t epoch, pp_disk::param_t *param, vec_t *r, vec_t *v, output_version_t o_version)
+void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::param_t *param, vec_t *r, vec_t *v, output_version_t o_version)
 {
 	static char sep = ' ';
 
@@ -320,6 +316,16 @@ void set_default(body_disk &bd)
 	}
 }
 
+int_t	calculate_number_of_bodies(body_disk &bd)
+{
+	int_t result = 0;
+	for (int body_type = BODY_TYPE_STAR; body_type < BODY_TYPE_N; body_type++)
+	{
+		result += bd.nBody[body_type];
+	}
+	return result;
+}
+
 void generate_oe(oe_range_t oe_r, pp_disk::orbelem_t& oe)
 {
 	oe.sma  = generate_random(oe_r.oe[SMA].limits.x,  oe_r.oe[SMA].limits.y,  oe_r.oe[SMA].pdf);
@@ -363,14 +369,13 @@ void generate_pp(phys_prop_range_t pp_r, pp_disk::param_t& param)
 
 int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_version)
 {
-	ostringstream convert;	// stream used for the conversion
 	var_t t = 0.0;
 
 	vec_t	rVec = {0.0, 0.0, 0.0, 0.0};
 	vec_t	vVec = {0.0, 0.0, 0.0, 0.0};
 
 	ofstream	output;
-	output.open(path, std::ios_base::app);
+	output.open(path, ios_base::app);
 
 	pp_disk::param_t	param0;
 	pp_disk::param_t	param;
@@ -390,14 +395,9 @@ int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_ver
 				param0.id = bodyId;
 
 				generate_pp(body_disk.pp_r[body_type], param0);
-				param0.migType = MIGRATION_TYPE_NO;
-				param0.migStopAt = 0.0;
-
-				convert << i;			// insert the textual representation of 'i' in the characters in the stream
-				i_str = convert.str();  // set 'i_str' to the contents of the stream
-				name = body_type_names[body_type] + i_str;
-
-				print_body_record(output, name, t, &param0, &rVec, &vVec, o_version);
+				param0.migType = body_disk.mig_type[bodyId];
+				param0.migStopAt = body_disk.stop_at[bodyId];
+				print_body_record(output, body_disk.names[bodyId], t, &param0, &rVec, &vVec, o_version);
 			} /* if */
 			else 
 			{
@@ -406,27 +406,8 @@ int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_ver
 
 				generate_oe(body_disk.oe_r[body_type], oe);
 				generate_pp(body_disk.pp_r[body_type], param);
-
-				convert << i;			// insert the textual representation of 'i' in the characters in the stream
-				i_str = convert.str();  // set 'i_str' to the contents of the stream
-				name = body_type_names[body_type] + i_str;
-
-				if (body_type == BODY_TYPE_ROCKYPLANET || 
-					body_type == BODY_TYPE_PROTOPLANET)
-				{
-					param.migType = MIGRATION_TYPE_TYPE_I;
-					param.migStopAt = 0.0;
-				}
-				else if (body_type == BODY_TYPE_GIANTPLANET)
-				{
-					param.migType = MIGRATION_TYPE_TYPE_II;
-					param.migStopAt = 0.0;
-				}
-				else 
-				{
-					param.migType = MIGRATION_TYPE_NO;
-					param.migStopAt = 0.0;
-				}
+				param0.migType = body_disk.mig_type[bodyId];
+				param0.migStopAt = body_disk.stop_at[bodyId];
 
 				var_t mu = K2*(param0.mass + param.mass);
 				int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -435,9 +416,8 @@ int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_ver
 					return ret_code;
 				}
 
-				print_body_record(output, name, t, &param, &rVec, &vVec, o_version);
+				print_body_record(output, body_disk.names[bodyId], t, &param, &rVec, &vVec, o_version);
 			} /* else */
-			convert.str("");
 		} /* for */
 	} /* for */
 	output.flush();
@@ -495,56 +475,62 @@ string create_number_of_bodies_str(const number_of_bodies *nBodies)
 
 int main(int argc, const char **argv)
 {
-	//number_of_bodies *nBodies = 0;
+	ostringstream convert;	// stream used for the conversion
+	string i_str;			// string which will contain the number
+	string name;
 
-	//string outDir;
-	//int retCode = parse_options(argc, argv, &nBodies, outDir);
-	//if (0 != retCode) {
-	//	exit(retCode);
-	//}
-	//string nbstr = create_number_of_bodies_str(nBodies);
+	body_disk_t test_disk;
+	set_default(test_disk);
 
-	//var2_t disk = {5.0, 6.0};	// AU
-	//retCode = generate_pp_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
+	test_disk.nBody[BODY_TYPE_STAR] = 1;
+	test_disk.nBody[BODY_TYPE_GIANTPLANET] = 2;
+	test_disk.nBody[BODY_TYPE_ROCKYPLANET] = 0;
+	test_disk.nBody[BODY_TYPE_PROTOPLANET] = 0;
+	test_disk.nBody[BODY_TYPE_SUPERPLANETESIMAL] = 0;
+	test_disk.nBody[BODY_TYPE_PLANETESIMAL] = 0;
+	test_disk.nBody[BODY_TYPE_TESTPARTICLE] = 0;
 
-	//var2_t disk = {65, 270};
-	//retCode = generate_Rezso_disk(combine_path(outDir, ("nBodies_" + nbstr + ".txt")), disk, nBodies);
+	int_t nBodies = calculate_number_of_bodies(test_disk);
+	test_disk.mig_type = new migration_type_t[nBodies];
+	test_disk.stop_at = new var_t[nBodies];
 
-	// Generate Dvorak disk
-	//var2_t disk = {0.9, 2.5};	// AU
-	//retCode = generate_Dvorak_disk(combine_path(outDir, ("DvorakDisk01_" + nbstr + ".txt")), disk, nBodies);
+	int	index_of_body = 0;
 
-	body_disk_t general;
-	set_default(general);
+	test_disk.names.push_back("star");
+	set(test_disk.pp_r[BODY_TYPE_STAR].pp[MASS], 1.0, pdf_const);
+	set(test_disk.pp_r[BODY_TYPE_STAR].pp[RADIUS], 1.0 * Constants::SolarRadiusToAu, pdf_const);
+	set(test_disk.pp_r[BODY_TYPE_STAR].pp[DRAG_COEFF], 0.0, pdf_const);
+	test_disk.mig_type[index_of_body] = MIGRATION_TYPE_NO;
+	test_disk.stop_at[index_of_body] = 0.0;
 
-	general.nBody[BODY_TYPE_STAR] = 1;
-	general.nBody[BODY_TYPE_GIANTPLANET] = 2;
-	general.nBody[BODY_TYPE_ROCKYPLANET] = 0;
-	general.nBody[BODY_TYPE_PROTOPLANET] = 0;
-	general.nBody[BODY_TYPE_SUPERPLANETESIMAL] = 0;
-	general.nBody[BODY_TYPE_PLANETESIMAL] = 0;
-	general.nBody[BODY_TYPE_TESTPARTICLE] = 0;
-
-	set(general.pp_r[BODY_TYPE_STAR].pp[MASS], 1.0, pdf_const);
-	set(general.pp_r[BODY_TYPE_STAR].pp[RADIUS], 1.0 * Constants::SolarRadiusToAu, pdf_const);
-	set(general.pp_r[BODY_TYPE_STAR].pp[DRAG_COEFF], 0.0, pdf_const);
-
-	for (int i = 0; i < general.nBody[BODY_TYPE_GIANTPLANET]; i++)
+	index_of_body++;
+	for (int i = 0; i < test_disk.nBody[BODY_TYPE_GIANTPLANET]; i++, index_of_body++)
 	{
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[SMA], 1.0, 4.0, pdf_const);
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[ECC], 0.0, 0.2, pdf_const);
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[INC], 0.0, 30.0 * Constants::DegreeToRadian, pdf_const);
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[PERI], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[NODE], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
-		set(general.oe_r[BODY_TYPE_GIANTPLANET].oe[MEAN], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
+		convert << i;			// insert the textual representation of 'i' in the characters in the stream
+		i_str = convert.str();  // set 'i_str' to the contents of the stream
+		name = body_type_names[BODY_TYPE_GIANTPLANET] + i_str;		
+		test_disk.names.push_back(name);
+		convert.str("");
 
-		set(general.pp_r[BODY_TYPE_GIANTPLANET].pp[MASS], 1.0 * Constants::JupiterToSolar, 2.0 * Constants::JupiterToSolar, pdf_mass_lognormal);
-		set(general.pp_r[BODY_TYPE_GIANTPLANET].pp[DENSITY], 0.7 * Constants::GramPerCm3ToSolarPerAu3, 1.2 * Constants::GramPerCm3ToSolarPerAu3, pdf_mass_lognormal);
-		set(general.pp_r[BODY_TYPE_GIANTPLANET].pp[DRAG_COEFF], 0.0, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[SMA], 1.0, 4.0, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[ECC], 0.0, 0.2, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[INC], 0.0, 30.0 * Constants::DegreeToRadian, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[PERI], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[NODE], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
+		set(test_disk.oe_r[BODY_TYPE_GIANTPLANET].oe[MEAN], 0.0, 360.0 * Constants::DegreeToRadian, pdf_const);
+
+		set(test_disk.pp_r[BODY_TYPE_GIANTPLANET].pp[MASS], 1.0 * Constants::JupiterToSolar, 2.0 * Constants::JupiterToSolar, pdf_mass_lognormal);
+		set(test_disk.pp_r[BODY_TYPE_GIANTPLANET].pp[DENSITY], 0.7 * Constants::GramPerCm3ToSolarPerAu3, 1.2 * Constants::GramPerCm3ToSolarPerAu3, pdf_mass_lognormal);
+		set(test_disk.pp_r[BODY_TYPE_GIANTPLANET].pp[DRAG_COEFF], 0.0, pdf_const);
+		test_disk.mig_type[index_of_body] = MIGRATION_TYPE_TYPE_II;
+		test_disk.stop_at[index_of_body] = 0.4;
 	}
 
 	string outDir = "C:\\Work\\Projects\\solaris.cuda\\TestRun\\InputTest";
-	generate_pp_disk(combine_path(outDir, "general.txt"), general, OUTPUT_VERSION_SECOND);
+	generate_pp_disk(combine_path(outDir, "test_disk.txt"), test_disk, OUTPUT_VERSION_SECOND);
+
+	delete[] test_disk.mig_type;
+	delete[] test_disk.stop_at;
 
 	return 0;
 }
