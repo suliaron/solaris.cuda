@@ -51,7 +51,6 @@ typedef enum phys_prop_name
 			DRAG_COEFF
 		} phys_prop_name_t;
 
-string body_type_names[] = {"star", "giant", "rocky", "proto", "superpl", "pl", "testp"}; 
 
 #ifdef STOP_WATCH
 typedef enum pp_disk_kernel
@@ -82,7 +81,7 @@ public:
 	var_t			elapsed[PP_DISK_KERNEL_N];
 	static string	kernel_name[PP_DISK_KERNEL_N];
 
-	void			clear_elasped();
+	void			clear_elapsed();
 	
 #endif
 
@@ -94,7 +93,7 @@ public:
 		//! Type of the body
 		body_type_t body_type;
 		//! Indicates whether the body is participating in the simulation or not (i.e. escaped)
-		bool_t active;
+		bool active;
 		//! The initial conditions are valid for this epoch
 		var_t epoch;
 		//! Mass of body in M_sol
@@ -149,7 +148,16 @@ public:
 
 	void calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy);
 
+	//! Loads the initial position and velocity of the bodies (first input version).
+	/*   
+		\param path the full path of the data file
+		\param n the total number of the bodies
+	*/
 	void load(string path, int n);
+	//! Loads the initial position and velocity of the bodies (second input version).
+	/*   
+		\param path the full path of the data file
+	*/
 	void load(string path);
 	void generate_rand(var2_t disk);
 	int print_positions(ostream& sout);

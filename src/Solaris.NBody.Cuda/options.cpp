@@ -21,18 +21,222 @@
 #include "rungekuttanystrom.h"
 #include "rkf7.h"
 
+void set_parameters_param(string& key, string& value, void* data, bool verbose)
+{
+	options* opt = (options*)data;
+
+	trim(key);
+	trim(value);
+	transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+	if (     key == "name") {
+		opt->sim_name = value;
+    } 
+    else if (key == "description") {
+		opt->sim_desc = value;
+    }
+    else if (key == "frame_center") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		if (     value == "bary") {
+			opt->fr_cntr = FRAME_CENTER_BARY;
+		}
+		else if (value == "astro") {
+			opt->fr_cntr = FRAME_CENTER_ASTRO;
+		}
+		else {
+			throw nbody_exception("Invalid frame center type: " + value);
+		}
+    }
+    else if (key == "integrator") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		if (value == "e" || value == "euler") {
+			opt->inttype = options::INTEGRATOR_EULER;
+		}
+		else if (value == "rk2" || value == "rungekutta2")	{
+			opt->inttype = options::INTEGRATOR_RUNGEKUTTA2;
+		}
+		else if (value == "ork2" || value == "optimizedrungekutta2")	{
+			opt->inttype = options::INTEGRATOR_OPT_RUNGEKUTTA2;
+		}
+		else if (value == "rk4" || value == "rungekutta4")	{
+			opt->inttype = options::INTEGRATOR_RUNGEKUTTA4;
+		}
+		else if (value == "rkf78" || value == "rungekuttafehlberg78")	{
+			opt->inttype = options::INTEGRATOR_RUNGEKUTTAFEHLBERG78;
+		}			
+		else if (value == "ork4" || value == "optimizedrungekutta4")	{
+			opt->inttype = options::INTEGRATOR_OPT_RUNGEKUTTA4;
+		}
+		else if (value == "rkn" || value == "rungekuttanystrom") {
+			opt->inttype = options::INTEGRATOR_RUNGEKUTTANYSTROM;
+		}
+		else if (value == "orkn" || value == "optimizedrungekuttanystrom") {
+			opt->inttype = options::INTEGRATOR_OPT_RUNGEKUTTANYSTROM;
+		}
+		else {
+			throw nbody_exception("Invalid integrator type: " + value);
+		}
+	}
+    else if (key == "adaptive") {
+		transform(value.begin(), value.end(), value.begin(), ::tolower);
+		bool b = false;
+		if (     value == "true") {
+			b = true;
+		}
+		else if (value == "false")  {
+			b = false;
+		}
+		else {
+			throw nbody_exception("Invalid value at: " + key);
+		}
+		opt->adaptive = b;
+	}
+    else if (key == "tolerance") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->tolerance = atof(value.c_str());
+	}
+    else if (key == "start_time") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->start_time = atof(value.c_str());
+	}
+    else if (key == "length") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->sim_length = atof(value.c_str());
+	}
+    else if (key == "output_interval") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->output_interval = atof(value.c_str());
+	}
+    else if (key == "ejection") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->ejection_dst = atof(value.c_str());
+	}
+    else if (key == "hit_centrum") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->hit_centrum_dst = atof(value.c_str());
+	}
+    else if (key == "collision_factor") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		opt->collision_factor = atof(value.c_str());
+	}
+	else {
+		throw nbody_exception("Invalid parameter :" + key + ".");
+	}
+
+	if (verbose) {
+		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+	}
+}
+
+void set_gasdisk_param(string& key, string& value, void* data, bool verbose)
+{
+	gas_disk* gasDisk = (gas_disk*)data;
+
+	trim(key);
+	trim(value);
+	transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+	if (     key == "name") {
+		gasDisk->name = value;
+    } 
+    else if (key == "description") {
+		gasDisk->desc = value;
+    }
+
+	else if (key == "alpha") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->alpha = atof(value.c_str());
+	}
+
+	else if (key == "eta_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->eta.x = atof(value.c_str());
+	}
+    else if (key == "eta_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->eta.y = atof(value.c_str());
+	}
+
+    else if (key == "rho_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->rho.x = atof(value.c_str());
+	}
+    else if (key == "rho_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->rho.y = atof(value.c_str());
+	}
+
+    else if (key == "sch_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->sch.x = atof(value.c_str());
+	}
+    else if (key == "sch_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->sch.y = atof(value.c_str());
+	}
+
+    else if (key == "tau_c") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->tau.x = atof(value.c_str());
+	}
+    else if (key == "tau_p") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->tau.y = atof(value.c_str());
+	}
+
+	else {
+		throw nbody_exception("Invalid parameter :" + key + ".");
+	}
+
+	if (verbose) {
+		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+	}
+}
+
+
 options::options(int argc, const char** argv)
 {
 	create_default_options();
 	parse_options(argc, argv);
 	if (parameters_path.length() > 0) {
 		load(parameters_path, parameters_str);
-		//parse_params(set_parameters_param);
-		//parse_parameters();
+		parse_params(parameters_str, (void*)this, set_parameters_param);
 	}
 	if (gasDisk_path.length() > 0) {
 		load(gasDisk_path, gasDisk_str);
-		parse_gasdisk();
+		parse_params(gasDisk_str, (void*)this->gasDisk, set_gasdisk_param);
 	}
 }
 
@@ -231,7 +435,40 @@ void options::parse_options(int argc, const char** argv)
 	}
 }
 
-//void options::parse_params(void (options::*setter)(string& key, string& value, bool verbose))
+void options::parse_params(string& input, void *data, void (*setter)(string& key, string& value, void* data, bool verbose))
+{
+	// instantiate Tokenizer classes
+	Tokenizer fileTokenizer;
+	Tokenizer lineTokenizer;
+	string line;
+
+	fileTokenizer.set(input, "\n");
+	while ((line = fileTokenizer.next()) != "") {
+		lineTokenizer.set(line, "=");
+		string token;
+		int tokenCounter = 1;
+
+		string key; 
+		string value;
+		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
+
+			if (tokenCounter == 1)
+				key = token;
+			else if (tokenCounter == 2)
+				value = token;
+
+			tokenCounter++;
+		}
+		if (tokenCounter > 2) {
+			setter(key, value, data, true);
+		}
+		else {
+			throw nbody_exception("Invalid key/value pair: " + line + ".");
+		}
+	}
+}
+
+//void options::parse_parameters()
 //{
 //	// instantiate Tokenizer classes
 //	Tokenizer fileTokenizer;
@@ -256,7 +493,7 @@ void options::parse_options(int argc, const char** argv)
 //			tokenCounter++;
 //		}
 //		if (tokenCounter > 2) {
-//			setter(key, value, true);
+//			set_parameters_param(key, value, true);
 //		}
 //		else {
 //			throw nbody_exception("Invalid key/value pair: " + line + ".");
@@ -264,241 +501,8 @@ void options::parse_options(int argc, const char** argv)
 //	}
 //}
 
-void options::parse_parameters()
-{
-	// instantiate Tokenizer classes
-	Tokenizer fileTokenizer;
-	Tokenizer lineTokenizer;
-	string line;
-
-	fileTokenizer.set(parameters_str, "\n");
-	while ((line = fileTokenizer.next()) != "") {
-		lineTokenizer.set(line, "=");
-		string token;
-		int tokenCounter = 1;
-
-		string key; 
-		string value;
-		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
-
-			if (tokenCounter == 1)
-				key = token;
-			else if (tokenCounter == 2)
-				value = token;
-
-			tokenCounter++;
-		}
-		if (tokenCounter > 2) {
-			set_parameters_param(key, value, true);
-		}
-		else {
-			throw nbody_exception("Invalid key/value pair: " + line + ".");
-		}
-	}
-}
-
 void options::parse_gasdisk()
 {
-}
-
-void options::set_parameters_param(string& key, string& value, bool verbose)
-{
-	trim(key);
-	trim(value);
-	transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-	if (     key == "name") {
-		sim_name = value;
-    } 
-    else if (key == "description") {
-		sim_desc = value;
-    }
-    else if (key == "frame_center") {
-		transform(value.begin(), value.end(), value.begin(), ::tolower);
-		if (     value == "bary") {
-			fr_cntr = FRAME_CENTER_BARY;
-		}
-		else if (value == "astro") {
-			fr_cntr = FRAME_CENTER_ASTRO;
-		}
-		else {
-			throw nbody_exception("Invalid frame center type: " + value);
-		}
-    }
-    else if (key == "integrator") {
-		transform(value.begin(), value.end(), value.begin(), ::tolower);
-		if (value == "e" || value == "euler") {
-			inttype = INTEGRATOR_EULER;
-		}
-		else if (value == "rk2" || value == "rungekutta2")	{
-			inttype = INTEGRATOR_RUNGEKUTTA2;
-		}
-		else if (value == "ork2" || value == "optimizedrungekutta2")	{
-			inttype = INTEGRATOR_OPT_RUNGEKUTTA2;
-		}
-		else if (value == "rk4" || value == "rungekutta4")	{
-			inttype = INTEGRATOR_RUNGEKUTTA4;
-		}
-		else if (value == "rkf78" || value == "rungekuttafehlberg78")	{
-			inttype = INTEGRATOR_RUNGEKUTTAFEHLBERG78;
-		}			
-		else if (value == "ork4" || value == "optimizedrungekutta4")	{
-			inttype = INTEGRATOR_OPT_RUNGEKUTTA4;
-		}
-		else if (value == "rkn" || value == "rungekuttanystrom") {
-			inttype = INTEGRATOR_RUNGEKUTTANYSTROM;
-		}
-		else if (value == "orkn" || value == "optimizedrungekuttanystrom") {
-			inttype = INTEGRATOR_OPT_RUNGEKUTTANYSTROM;
-		}
-		else {
-			throw nbody_exception("Invalid integrator type: " + value);
-		}
-	}
-    else if (key == "adaptive") {
-		transform(value.begin(), value.end(), value.begin(), ::tolower);
-		bool b = false;
-		if (     value == "true") {
-			b = true;
-		}
-		else if (value == "false")  {
-			b = false;
-		}
-		else {
-			throw nbody_exception("Invalid value at: " + key);
-		}
-		adaptive = b;
-	}
-    else if (key == "tolerance") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		tolerance = atof(value.c_str());
-	}
-    else if (key == "start_time") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		start_time = atof(value.c_str());
-	}
-    else if (key == "length") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		sim_length = atof(value.c_str());
-	}
-    else if (key == "output_interval") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		output_interval = atof(value.c_str());
-	}
-    else if (key == "ejection") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		ejection_dst = atof(value.c_str());
-	}
-    else if (key == "hit_centrum") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		hit_centrum_dst = atof(value.c_str());
-	}
-    else if (key == "collision_factor") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		collision_factor = atof(value.c_str());
-	}
-	else {
-		throw nbody_exception("Invalid parameter :" + key + ".");
-	}
-
-	if (verbose) {
-		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
-	}
-}
-
-void options::set_gasdisk_param(string& key, string& value, bool verbose)
-{
-	trim(key);
-	trim(value);
-	transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-	if (     key == "name") {
-		gasDisk->name = value;
-    } 
-    else if (key == "description") {
-		gasDisk->desc = value;
-    }
-
-	else if (key == "alpha") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->alpha = atof(value.c_str());
-	}
-
-	else if (key == "eta_c") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->eta.x = atof(value.c_str());
-	}
-    else if (key == "eta_p") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->eta.y = atof(value.c_str());
-	}
-
-    else if (key == "rho_c") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->rho.x = atof(value.c_str());
-	}
-    else if (key == "rho_p") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->rho.y = atof(value.c_str());
-	}
-
-    else if (key == "sch_c") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->sch.x = atof(value.c_str());
-	}
-    else if (key == "sch_p") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->sch.y = atof(value.c_str());
-	}
-
-    else if (key == "tau_c") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->tau.x = atof(value.c_str());
-	}
-    else if (key == "tau_p") {
-		if (!is_number(value)) {
-			throw nbody_exception("Invalid number at: " + key);
-		}
-		gasDisk->tau.y = atof(value.c_str());
-	}
-
-	else {
-		throw nbody_exception("Invalid parameter :" + key + ".");
-	}
-
-	if (verbose) {
-		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
-	}
 }
 
 void options::load(string& path, string& result)
@@ -526,7 +530,7 @@ void options::load(string& path, string& result)
 	file.close();
 }
 
-void options::load(string& path)
+void options::get_number_of_bodies(string& path)
 {
 	ifstream input(path.c_str());
 	if (input) 
@@ -675,7 +679,7 @@ pp_disk*	options::create_pp_disk()
 	if (this->bodylist_path.length() > 0)
 	{
 		// set the nBodies field using the data in the bodylist_path
-		load(bodylist_path);
+		get_number_of_bodies(bodylist_path);
 		ppd = new pp_disk(nBodies, gasDisk, start_time);
 		ppd->load(bodylist_path);
 	}

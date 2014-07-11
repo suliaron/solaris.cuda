@@ -27,7 +27,7 @@ protected:
 	var_t			elapsed[ODE_KERNEL_N];
 	static char*	kernel_name[ODE_KERNEL_N];
 
-	void			clear_elasped();
+	void			clear_elapsed();
 #endif
 
 public:

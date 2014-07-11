@@ -498,7 +498,7 @@ void compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, devi
 		ppd->copy_to_device();
 
 		for (int i = 1; i <= iterMax; i++) {
-			ppd->clear_elasped();
+			ppd->clear_elapsed();
 			ppd->calculate_dy(1, 0, 0.0, ppd->d_p, ppd->d_y, ppd->d_yout[1]);
 			for (int j = 0; j < PP_DISK_KERNEL_N; j++) 
 			{
@@ -516,7 +516,7 @@ void compute_gravity_acceleration(number_of_bodies *nBodies, int_t iterMax, devi
 		vec_t* h_a  = (vec_t*)h_acce.data();
 
 		for (int i = 1; i <= iterMax; i++) {
-			ppd->clear_elasped();
+			ppd->clear_elapsed();
 			if (0 < nBodies->n_self_interacting()) {
 				interaction_bound iBound = nBodies->get_self_interacting();
 				ppd->s_watch.start();

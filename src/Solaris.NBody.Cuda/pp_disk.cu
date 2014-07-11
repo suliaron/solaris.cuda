@@ -28,7 +28,7 @@ using namespace std;
 
 #ifdef STOP_WATCH
 
-void pp_disk::clear_elasped()
+void pp_disk::clear_elapsed()
 {
 	for (int i = 0; i < PP_DISK_KERNEL_N; i++)
 	{
@@ -845,7 +845,7 @@ pp_disk::pp_disk(number_of_bodies *nBodies, gas_disk *gasDisk, ttt_t t0) :
 {
 	allocate_vectors();
 #ifdef STOP_WATCH
-	clear_elasped();
+	clear_elapsed();
 #endif
 }
 
@@ -1224,6 +1224,7 @@ void pp_disk::transform_to_bc()
 	cout << " ... finished" << endl;
 }
 
+
 void pp_disk::load(string path, int n)
 {
 	cout << "Loading " << path << " ... ";
@@ -1232,7 +1233,7 @@ void pp_disk::load(string path, int n)
 	vec_t* velo = (vec_t*)h_y[1].data();
 	param_t* param = (param_t*)h_p.data();
 
-	ifstream input(path.c_str());
+	fstream input(path.c_str(), ios_base::in);
 
 	if (input) {
 		int_t	migType = 0;
@@ -1302,6 +1303,7 @@ void pp_disk::load(string path)
 		string	dummy;
         		
 		for (int i = 0; i < nBodies->total; i++) { 
+			param[i].active = true;
 			// id
 			input >> param[i].id;
 			// name (discard it)
@@ -1312,14 +1314,6 @@ void pp_disk::load(string path)
 			// epoch
 			input >> param[i].epoch;
 
-			// position
-			input >> coor[i].x;
-			input >> coor[i].y;
-			input >> coor[i].z;
-			// velocity
-			input >> velo[i].x;
-			input >> velo[i].y;
-			input >> velo[i].z;
 			// mass
 			input >> param[i].mass;
 			// radius
@@ -1336,6 +1330,15 @@ void pp_disk::load(string path)
 			param[i].migType = static_cast<migration_type_t>(type);
 			// migration stop at
 			input >> param[i].migStopAt;
+
+			// position
+			input >> coor[i].x;
+			input >> coor[i].y;
+			input >> coor[i].z;
+			// velocity
+			input >> velo[i].x;
+			input >> velo[i].y;
+			input >> velo[i].z;
         }
         input.close();
 	}

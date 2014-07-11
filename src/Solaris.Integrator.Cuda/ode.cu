@@ -7,7 +7,7 @@ using namespace std;
 
 #ifdef STOP_WATCH
 
-void ode::clear_elasped()
+void ode::clear_elapsed()
 {
 	for (int i = 0; i < ODE_KERNEL_N; i++)
 	{
