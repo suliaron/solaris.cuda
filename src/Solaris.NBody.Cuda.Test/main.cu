@@ -261,14 +261,9 @@ int device_query(int argc, const char **argv)
     return (EXIT_SUCCESS);
 }
 
-
-
-// -nBodies 1 1 0 10000 0 100000 0 -i RKF78 -a 1.0e-10 -t 1000 -dt 10.0 -p 10 10 10 -o C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU -f C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU\nBodies_1_1_0_10000_0_100000_0.txt
 int main(int argc, const char** argv)
 {
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
-
-	//cudaDeviceReset();
 	device_query(argc, argv);
 
 	time_t start = time(NULL);
@@ -276,9 +271,34 @@ int main(int argc, const char** argv)
 	// Integrate the pp_disk ode
 	try {
 		options opt(argc, argv);
-#if 1
+
 		pp_disk* ppd		= opt.create_pp_disk();
-#endif
+		integrator* intgr	= opt.create_integrator(ppd);
+
+	} /* try */
+	catch (nbody_exception& ex)
+	{
+		cerr << "Error: " << ex.what() << endl;
+	}
+	cout << "Total time: " << time(NULL) - start << " s" << endl;
+
+	return 0;
+}
+
+#if 0
+// -nBodies 1 1 0 10000 0 100000 0 -i RKF78 -a 1.0e-10 -t 1000 -dt 10.0 -p 10 10 10 -o C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU -f C:\Work\Solaris.Cuda.TestRuns\2MStar_5MJupiter_Disc65-270_01\GPU\nBodies_1_1_0_10000_0_100000_0.txt
+int main(int argc, const char** argv)
+{
+	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
+	device_query(argc, argv);
+
+	time_t start = time(NULL);
+
+	// Integrate the pp_disk ode
+	try {
+		options opt(argc, argv);
+
+		pp_disk* ppd		= opt.create_pp_disk();
 		integrator* intgr	= opt.create_integrator(ppd);
 
 		ttt_t pp			= 0;
@@ -351,11 +371,13 @@ int main(int argc, const char** argv)
 		delete intgr;
 		delete positionsf;
 		delete orbelemf;
-	}	// end try bracket
-	catch (nbody_exception& ex) {
+	} /* try */
+	catch (nbody_exception& ex)
+	{
 		cerr << "Error: " << ex.what() << endl;
 	}
 	cout << "Total time: " << time(NULL) - start << " s" << endl;
 
 	return 0;
 }
+#endif

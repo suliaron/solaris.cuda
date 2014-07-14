@@ -112,13 +112,8 @@ private:
 	void create_default_options();
 	void parse_options(int argc, const char** argv);
 	void parse_params(string &input, void *data, void (*setter)(string& key, string& value, void* data, bool verbose));
-	//void parse_parameters();
-	void parse_gasdisk();
 	void load(string& path, string& result);
 	void get_number_of_bodies(string& path);
-
-	//void set_parameters_param(string& key, string& value, bool verbose);
-	//void set_gasdisk_param(string& key, string& value, bool verbose);
 
 	void initial_condition(nbody* nb);
 };

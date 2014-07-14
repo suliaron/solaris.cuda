@@ -27,6 +27,8 @@ public:
 
 	__host__ __device__ 
 	var_t	reduction_factor(ttt_t time);
+	//! Calculate the mean free path length and temperature profile
+	void	calculate();
 
 	//! Time when the decrease of gas starts (for linear and exponential)
 	ttt_t	t0; 

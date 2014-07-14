@@ -394,7 +394,7 @@ int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_ver
 void set_parameters_of_Dvorak_disk(body_disk_t& disk)
 {
 	const var_t mCeres		= 9.43e20 /* kg */ * Constants::KilogramToSolar;
-	const var_t mMoon		= 9.43e20 /* kg */ * Constants::KilogramToSolar;
+	const var_t mMoon		= 7.35e22 /* kg */ * Constants::KilogramToSolar;
 	const var_t rhoBasalt	= 2.7 /* g/cm^3 */ * Constants::GramPerCm3ToSolarPerAu3;
 
 	set_default(disk);

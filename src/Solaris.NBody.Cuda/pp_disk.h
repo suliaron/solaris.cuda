@@ -140,8 +140,11 @@ public:
 
 	d_orbelem_t			d_orbelem;
 	h_orbelem_t			h_orbelem;
+
+	gas_disk			*h_gasDisk;
+	gas_disk			*d_gasDisk;
 	
-	pp_disk(number_of_bodies *nBodies, gas_disk *gasDisk, ttt_t t0);
+	pp_disk(number_of_bodies *nBodies, bool has_gas, ttt_t t0);
 	~pp_disk();
 
 	h_orbelem_t calculate_orbelem(int_t refBodyId);
@@ -158,7 +161,7 @@ public:
 	/*   
 		\param path the full path of the data file
 	*/
-	void load(string path);
+	void load(string& path);
 	void generate_rand(var2_t disk);
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);
@@ -166,6 +169,8 @@ public:
 	void transform_to_bc();
 	//! Computes the total mass of the system
 	var_t	get_total_mass();
+	//! Returns the mass of the central star (the id of the star must be 0!)
+	var_t get_mass_of_star();
 	//! Compute the position and velocity of the system's barycenter
 	/*  
 		\param M0 will contains the total mass of the system
@@ -188,14 +193,12 @@ private:
 	dim3	block;
 
 	number_of_bodies	*nBodies;
-	gas_disk			*h_gasDisk;
-	gas_disk			*d_gasDisk;
 
 	d_var_t				acceGasDrag;
 	d_var_t				acceMigrateI;
 	d_var_t				acceMigrateII;
 
-	void allocate_vectors();
+	void allocate_vectors(bool has_gas);
 
 	//! Calls the kernel that calculates the accelerations from gravitational
 	/*  interactions.

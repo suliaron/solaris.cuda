@@ -77,24 +77,11 @@ void set_parameters_param(string& key, string& value, void* data, bool verbose)
 			throw nbody_exception("Invalid integrator type: " + value);
 		}
 	}
-    else if (key == "adaptive") {
-		transform(value.begin(), value.end(), value.begin(), ::tolower);
-		bool b = false;
-		if (     value == "true") {
-			b = true;
-		}
-		else if (value == "false")  {
-			b = false;
-		}
-		else {
-			throw nbody_exception("Invalid value at: " + key);
-		}
-		opt->adaptive = b;
-	}
     else if (key == "tolerance") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
+		opt->adaptive = true;
 		opt->tolerance = atof(value.c_str());
 	}
     else if (key == "start_time") {
@@ -157,11 +144,58 @@ void set_gasdisk_param(string& key, string& value, void* data, bool verbose)
 		gasDisk->desc = value;
     }
 
+	else if (key == "mean_molecular_weight" || key == "mmw") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->mean_molecular_weight = atof(value.c_str());
+	}
+	else if (key == "particle_diameter" || key == "diameter") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->particle_diameter = atof(value.c_str());
+	}
+
 	else if (key == "alpha") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
 		gasDisk->alpha = atof(value.c_str());
+	}
+
+	else if (key == "time_dependence") {
+		if (     value == "constant" || value == "const") {
+			gasDisk->gas_decrease = GAS_DENSITY_CONSTANT;
+		}
+		else if (value == "linear" || value == "lin") {
+			gasDisk->gas_decrease = GAS_DENSITY_DECREASE_LINEAR;
+		}
+		else if (value == "exponential" || value == "exp") {
+			gasDisk->gas_decrease = GAS_DENSITY_DECREASE_EXPONENTIAL;
+		}
+		else {
+			throw nbody_exception("Invalid value at: " + key);
+		}
+	}
+
+	else if (key == "t0") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->t0 = atof(value.c_str());
+	}
+	else if (key == "t1") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->t1 = atof(value.c_str());
+	}
+	else if (key == "e_folding_time") {
+		if (!is_number(value)) {
+			throw nbody_exception("Invalid number at: " + key);
+		}
+		gasDisk->e_folding_time = atof(value.c_str());
 	}
 
 	else if (key == "eta_c") {
@@ -236,6 +270,9 @@ options::options(int argc, const char** argv)
 	}
 	if (gasDisk_path.length() > 0) {
 		load(gasDisk_path, gasDisk_str);
+		// If default gas disk was created, delete it
+		delete[] gasDisk;
+		gasDisk = new gas_disk;
 		parse_params(gasDisk_str, (void*)this->gasDisk, set_gasdisk_param);
 	}
 }
@@ -311,7 +348,6 @@ void options::parse_options(int argc, const char** argv)
 			parameters_path = argv[i];
 		}
 		else if (p == "-igd") {
-			gasDisk = new gas_disk;
 			i++;
 			gasDisk_path = argv[i];
 		}
@@ -466,43 +502,6 @@ void options::parse_params(string& input, void *data, void (*setter)(string& key
 			throw nbody_exception("Invalid key/value pair: " + line + ".");
 		}
 	}
-}
-
-//void options::parse_parameters()
-//{
-//	// instantiate Tokenizer classes
-//	Tokenizer fileTokenizer;
-//	Tokenizer lineTokenizer;
-//	string line;
-//
-//	fileTokenizer.set(parameters_str, "\n");
-//	while ((line = fileTokenizer.next()) != "") {
-//		lineTokenizer.set(line, "=");
-//		string token;
-//		int tokenCounter = 1;
-//
-//		string key; 
-//		string value;
-//		while ((token = lineTokenizer.next()) != "" && tokenCounter <= 2) {
-//
-//			if (tokenCounter == 1)
-//				key = token;
-//			else if (tokenCounter == 2)
-//				value = token;
-//
-//			tokenCounter++;
-//		}
-//		if (tokenCounter > 2) {
-//			set_parameters_param(key, value, true);
-//		}
-//		else {
-//			throw nbody_exception("Invalid key/value pair: " + line + ".");
-//		}
-//	}
-//}
-
-void options::parse_gasdisk()
-{
 }
 
 void options::load(string& path, string& result)
@@ -680,12 +679,12 @@ pp_disk*	options::create_pp_disk()
 	{
 		// set the nBodies field using the data in the bodylist_path
 		get_number_of_bodies(bodylist_path);
-		ppd = new pp_disk(nBodies, gasDisk, start_time);
+		ppd = new pp_disk(nBodies, (gasDisk == 0 ? false : true), start_time);
 		ppd->load(bodylist_path);
 	}
 	else
 	{
-		ppd = new pp_disk(nBodies, gasDisk, start_time);
+		ppd = new pp_disk(nBodies, (gasDisk == 0 ? false : true), start_time);
 		if (file) {
 			ppd->load(filename, nBodies->total);
 		}
@@ -693,8 +692,18 @@ pp_disk*	options::create_pp_disk()
 			throw nbody_exception("file is missing!");
 		}
 	}
-	ppd->t = start_time;
+	if (gasDisk != 0)
+	{
+		gasDisk->m_star = ppd->get_mass_of_star();
+		gasDisk->calculate();
 
+		ppd->h_gasDisk = gasDisk;
+		// Copies gas disk parameters and variables to the cuda device from the host
+		cudaMalloc((void**)&(ppd->d_gasDisk), sizeof(gas_disk));
+		cudaMemcpy(ppd->d_gasDisk, ppd->h_gasDisk, sizeof(gas_disk), cudaMemcpyHostToDevice );
+	}
+
+	ppd->t = start_time;
 	ppd->transform_to_bc();
 	ppd->copy_to_device();
 

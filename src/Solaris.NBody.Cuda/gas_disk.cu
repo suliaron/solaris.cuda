@@ -4,7 +4,7 @@
 #include "config.h"
 #include "constants.h"
 
-gas_disk::gas_disk() 
+gas_disk::gas_disk()
 {
 	name = "Default gas disk";
 	desc = "Default gas disk with constant gas density";
@@ -24,6 +24,8 @@ gas_disk::gas_disk()
 	m_star = 1.0;
 	mean_molecular_weight = 2.3;
 	particle_diameter    = 3.0e-10 * Constants::MeterToAu;
+	calculate();
+/*
 	c_vth = sqrt((8.0 * Constants::Boltzman_CMU)/(Constants::Pi * mean_molecular_weight * Constants::ProtonMass_CMU));
 
 	mfp.x = mean_molecular_weight * Constants::ProtonMass_CMU / (sqrt(2.0) * Constants::Pi * SQR(particle_diameter) * rho.x);
@@ -31,6 +33,7 @@ gas_disk::gas_disk()
 
 	temp.x = SQR(sch.x) * Constants::Gauss2 * m_star * mean_molecular_weight * Constants::ProtonMass_CMU / Constants::Boltzman_CMU;
 	temp.y = 2.0 * sch.y - 3.0;
+*/
 }
 
 gas_disk::gas_disk(var2_t rho, var2_t sch, var2_t eta, var2_t tau, gas_decrease_t gas_decrease, ttt_t t0, ttt_t t1, ttt_t e_folding_time, var_t m_star) :
@@ -45,7 +48,21 @@ gas_disk::gas_disk(var2_t rho, var2_t sch, var2_t eta, var2_t tau, gas_decrease_
 	m_star(m_star)
 {
     mean_molecular_weight = 2.3;
-	particle_diameter    = 3.0e-10 * Constants::MeterToAu;
+	particle_diameter     = 3.0e-10 * Constants::MeterToAu;
+	calculate();
+/*
+	c_vth = sqrt((8.0 * Constants::Boltzman_CMU)/(Constants::Pi * mean_molecular_weight * Constants::ProtonMass_CMU));
+
+	mfp.x = mean_molecular_weight * Constants::ProtonMass_CMU / (sqrt(2.0) * Constants::Pi * SQR(particle_diameter) * rho.x);
+	mfp.y = -rho.y;
+
+	temp.x = SQR(sch.x) * Constants::Gauss2 * m_star * mean_molecular_weight * Constants::ProtonMass_CMU / Constants::Boltzman_CMU;
+	temp.y = 2.0 * sch.y - 3.0;
+*/
+}
+
+void	gas_disk::calculate()
+{
 	c_vth = sqrt((8.0 * Constants::Boltzman_CMU)/(Constants::Pi * mean_molecular_weight * Constants::ProtonMass_CMU));
 
 	mfp.x = mean_molecular_weight * Constants::ProtonMass_CMU / (sqrt(2.0) * Constants::Pi * SQR(particle_diameter) * rho.x);

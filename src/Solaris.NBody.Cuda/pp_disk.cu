@@ -834,16 +834,15 @@ void	calculate_orbelem_kernel(
 
 
 
-pp_disk::pp_disk(number_of_bodies *nBodies, gas_disk *gasDisk, ttt_t t0) :
+pp_disk::pp_disk(number_of_bodies *nBodies, bool has_gas, ttt_t t0) :
 	ode(2, t0),
 	nBodies(nBodies),
-	h_gasDisk(gasDisk),
 	d_gasDisk(0),
 	acceGasDrag(d_var_t()),
 	acceMigrateI(d_var_t()),
 	acceMigrateII(d_var_t())
 {
-	allocate_vectors();
+	allocate_vectors(has_gas);
 #ifdef STOP_WATCH
 	clear_elapsed();
 #endif
@@ -856,7 +855,7 @@ pp_disk::~pp_disk()
 	cudaFree(d_gasDisk);
 }
 
-void pp_disk::allocate_vectors()
+void pp_disk::allocate_vectors(bool has_gas)
 {
 	// Parameters
 	int	npar = sizeof(param_t) / sizeof(var_t);
@@ -867,13 +866,8 @@ void pp_disk::allocate_vectors()
 	h_y[0].resize(ndim * nBodies->total);
 	h_y[1].resize(ndim * nBodies->total);
 
-	if (0 != h_gasDisk) {
+	if (has_gas) {
 		acceGasDrag.resize(ndim * nBodies->n_gas_drag());
-		// TODO:
-		// ask Laci, how to find out if there was an error during these 2 cuda function calls
-		cudaMalloc((void**)&d_gasDisk, sizeof(gas_disk));
-		cudaMemcpy(d_gasDisk, h_gasDisk, sizeof(gas_disk), cudaMemcpyHostToDevice );
-
 		if (0 < (nBodies->rocky_planet + nBodies->proto_planet)) {
 			acceMigrateI.resize(ndim * (nBodies->rocky_planet + nBodies->proto_planet));
 		}
@@ -1169,6 +1163,18 @@ pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
 	return h_orbelem;
 }
 
+var_t pp_disk::get_mass_of_star()
+{
+	param_t* param = (param_t*)h_p.data();
+	for (int j = 0; j < nBodies->n_massive(); j++ ) {
+		if (param[j].id == 0)
+		{
+			return param[j].mass;
+		}
+	}
+	return 0.0;
+}
+
 var_t	pp_disk::get_total_mass()
 {
 	var_t totalMass = 0.0;
@@ -1202,7 +1208,7 @@ void	pp_disk::compute_bc(var_t M0, vec_t* R0, vec_t* V0)
 
 void pp_disk::transform_to_bc()
 {
-	cout << "Transform to barycentric system started";
+	cout << "Transforming to barycentric system ... ";
 
 	vec_t* coor = (vec_t*)h_y[0].data();
 	vec_t* velo = (vec_t*)h_y[1].data();
@@ -1221,7 +1227,7 @@ void pp_disk::transform_to_bc()
 		velo[j].x -= V0.x;		velo[j].y -= V0.y;		velo[j].z -= V0.z;
 	}
 
-	cout << " ... finished" << endl;
+	cout << "done" << endl;
 }
 
 
@@ -1271,7 +1277,7 @@ void pp_disk::load(string path, int n)
 	cout << "done" << endl;
 }
 
-void pp_disk::load(string path)
+void pp_disk::load(string& path)
 {
 	cout << "Loading " << path << " ... ";
 
@@ -1306,8 +1312,9 @@ void pp_disk::load(string path)
 			param[i].active = true;
 			// id
 			input >> param[i].id;
-			// name (discard it)
+			// name
 			input >> dummy;
+			body_names.push_back(dummy);
 			// body type
 			input >> type;
 			param[i].body_type = static_cast<body_type_t>(type);
