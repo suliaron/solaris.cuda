@@ -34,6 +34,11 @@ int ode::get_order()
 	return h_y.size();
 }
 
+ttt_t ode::get_currt()
+{
+	return t;
+}
+
 void ode::copy_to_host()
 {
 	// Copy parameters to the host

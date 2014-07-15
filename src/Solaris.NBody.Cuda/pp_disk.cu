@@ -1561,7 +1561,6 @@ void pp_disk::generate_rand(var2_t disk)
 	}
 }
 
-// Print body positions
 int pp_disk::print_positions(ostream& sout)
 {
 	cout << "Printing position ... ";
@@ -1570,10 +1569,10 @@ int pp_disk::print_positions(ostream& sout)
 	vec_t* h_coord = (vec_t*)h_y[0].data();
 	vec_t* h_veloc = (vec_t*)h_y[1].data();
 	
+	sout << t << '\t';
 	for (int i = 0; i < nBodies->total; i ++)
 	{
 		sout << h_param[i].id << '\t';
-		sout << t << '\t';
 		sout << h_param[i].mass << '\t';
 		sout << h_param[i].radius << '\t';
 		sout << h_param[i].density << '\t';
@@ -1582,10 +1581,9 @@ int pp_disk::print_positions(ostream& sout)
 		sout << h_coord[i].z << '\t';
 		sout << h_veloc[i].x << '\t';
 		sout << h_veloc[i].y << '\t';
-		sout << h_veloc[i].z;
-
-		sout << endl;
+		sout << h_veloc[i].z << '\t';
 	}
+	sout << endl;
 
 	cout << "done" << endl;
 

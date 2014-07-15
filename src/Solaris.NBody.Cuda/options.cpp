@@ -23,8 +23,11 @@
 
 void set_parameters_param(string& key, string& value, void* data, bool verbose)
 {
+	static char n_call = 0;
+
 	options* opt = (options*)data;
 
+	n_call++;
 	trim(key);
 	trim(value);
 	transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -88,19 +91,19 @@ void set_parameters_param(string& key, string& value, void* data, bool verbose)
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->start_time = atof(value.c_str());
+		opt->start_time = atof(value.c_str()) * Constants::YearToDay;
 	}
     else if (key == "length") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->sim_length = atof(value.c_str());
+		opt->sim_length = atof(value.c_str()) * Constants::YearToDay;
 	}
     else if (key == "output_interval") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->output_interval = atof(value.c_str());
+		opt->output_interval = atof(value.c_str()) * Constants::YearToDay;
 	}
     else if (key == "ejection") {
 		if (!is_number(value)) {
@@ -125,14 +128,20 @@ void set_parameters_param(string& key, string& value, void* data, bool verbose)
 	}
 
 	if (verbose) {
-		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+		if (n_call == 1) {
+			cout << "The following common parameters are setted:" << endl;
+		}
+		cout << "\t'" << key << "' was assigned to '" << value << "'" << endl;
 	}
 }
 
 void set_gasdisk_param(string& key, string& value, void* data, bool verbose)
 {
+	static char n_call = 0;
+
 	gas_disk* gasDisk = (gas_disk*)data;
 
+	n_call++;
 	trim(key);
 	trim(value);
 	transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -255,7 +264,10 @@ void set_gasdisk_param(string& key, string& value, void* data, bool verbose)
 	}
 
 	if (verbose) {
-		cout << "'" << key << "' was assigned to '" << value << "'" << std::endl;
+		if (n_call == 1) {
+			cout << "The following gas disk parameters are setted:" << endl;
+		}
+		cout << "\t'" << key << "' was assigned to '" << value << "'" << std::endl;
 	}
 }
 
@@ -264,6 +276,7 @@ options::options(int argc, const char** argv)
 {
 	create_default_options();
 	parse_options(argc, argv);
+
 	if (parameters_path.length() > 0) {
 		load(parameters_path, parameters_str);
 		parse_params(parameters_str, (void*)this, set_parameters_param);
@@ -275,6 +288,7 @@ options::options(int argc, const char** argv)
 		gasDisk = new gas_disk;
 		parse_params(gasDisk_str, (void*)this->gasDisk, set_gasdisk_param);
 	}
+	stop_time = start_time + sim_length;
 }
 
 options::~options() 
@@ -283,6 +297,7 @@ options::~options()
 
 void options::create_default_options()
 {
+	verbose			= false;
 	n				= 256;
 	nBodies			= 0;
 	inttype			= INTEGRATOR_EULER;
@@ -355,6 +370,10 @@ void options::parse_options(int argc, const char** argv)
 			i++;
 			bodylist_path = argv[i];
 		}
+		else if (p == "--verbose" || p == "-v") {
+			verbose = true;
+		}
+
 
 		// Number of bodies
 		else if (p == "-n") {
@@ -496,7 +515,7 @@ void options::parse_params(string& input, void *data, void (*setter)(string& key
 			tokenCounter++;
 		}
 		if (tokenCounter > 2) {
-			setter(key, value, data, true);
+			setter(key, value, data, verbose);
 		}
 		else {
 			throw nbody_exception("Invalid key/value pair: " + line + ".");

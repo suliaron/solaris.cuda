@@ -36,9 +36,8 @@ public:
 
 
 public:
+	bool	verbose;				//!< print more information to the screen or log file
 	int		n;						// Number of bodies
-	//ttt_t	start_time;				// Start time
-	//ttt_t	stop_time;				// Stop time
 	ttt_t	dt;						// Initial time step
 	var_t	buffer_radius;			// collision buffer
 	bool_t	printout;				// Printout enabled

@@ -58,6 +58,9 @@ public:
 	//! Returns the order of the ODE
 	int get_order();
 
+	//! Get current time
+	ttt_t get_currt();
+
 	//! Copies ODE parameters and variables from the cuda device to the host
 	void copy_to_host();
 

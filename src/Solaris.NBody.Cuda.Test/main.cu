@@ -1,4 +1,5 @@
 // includes system 
+#include <cmath>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -261,6 +262,16 @@ int device_query(int argc, const char **argv)
     return (EXIT_SUCCESS);
 }
 
+void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, std::ostream& log_f)
+{
+	ttt_t t = ppd->get_currt();
+	ttt_t avg_dt = (t - opt->start_time)/(var_t)intgr->get_n_step();
+	log_f << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << t << " [day] average dt: " << setprecision(10) << setw(16) << avg_dt << " [d]\t";
+	log_f << setprecision(5) << setw(6) << (t/opt->stop_time)*100.0 << " % done" << endl;
+
+	log_f.flush();
+}
+
 int main(int argc, const char** argv)
 {
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
@@ -275,6 +286,43 @@ int main(int argc, const char** argv)
 		pp_disk* ppd		= opt.create_pp_disk();
 		integrator* intgr	= opt.create_integrator(ppd);
 
+		ttt_t currt			= ppd->get_currt();
+		ttt_t ps			= 0;
+		ttt_t dt			= 0;
+
+		string path = combine_path(opt.printoutDir, "position.txt");
+		ostream* pos_f = new ofstream(path.c_str(), ios::out);
+		path = combine_path(opt.printoutDir, "event.txt");
+		ostream* event_f = new ofstream(path.c_str(), ios::out);
+		path = combine_path(opt.printoutDir, "log.txt");
+		ostream* log_f = new ofstream(path.c_str(), ios::out);
+
+		// Save initial conditions to the output file
+		ppd->print_positions(*pos_f);
+		while (currt <= opt.stop_time)
+		{
+			if (fabs(ps) >= opt.output_interval)
+			{
+				ps = 0.0;
+				ppd->copy_to_host();
+				ppd->print_positions(*pos_f);
+				if (opt.verbose && currt != opt.start_time)
+				{
+					print_step_stat(ppd, &opt, intgr, *log_f);
+					cout << "t: " << setw(15) << currt << ", dt: " << setw(15) << dt << " [d]" << endl;
+				}
+			}
+			dt = intgr->step();
+			ps += fabs(dt);
+			currt = ppd->get_currt();
+		}
+		// Save final conditions to the output file
+		ppd->print_positions(*pos_f);
+		if (opt.verbose)
+		{
+			print_step_stat(ppd, &opt, intgr, *log_f);
+			cout << "t: " << setw(15) << currt << ", dt: " << setw(15) << dt << " [d]" << endl;
+		}
 	} /* try */
 	catch (nbody_exception& ex)
 	{

@@ -163,6 +163,7 @@ public:
 	*/
 	void load(string& path);
 	void generate_rand(var2_t disk);
+	//! Print all bodies' id, mass, radius, density, position and velocity vector
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);
 
