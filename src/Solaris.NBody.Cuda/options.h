@@ -34,7 +34,6 @@ public:
 				INTEGRATOR_OPT_RUNGEKUTTANYSTROM
 			} integrator_type_t;
 
-
 public:
 	bool	verbose;				//!< print more information to the screen or log file
 	int		n;						// Number of bodies
@@ -51,9 +50,7 @@ public:
 	number_of_bodies	*nBodies;
 	gas_disk			*gasDisk;
 
-	//integrator_type_t inttype;		// Integrator type
 	bool_t adaptive;				// Adaptive step size
-	//var_t tolerance;				// Tolerance
 	bool_t file;					// Input file supplied
 	int filen;						// Number of entries in input file
 	bool_t random;					// Generate random data
@@ -79,7 +76,7 @@ public:
 	//! type of the integrator
 	integrator_type_t inttype;
 	//! tolerance/eps/accuracy of the simulation
-	var_t tolerance;
+	var_t	tolerance;
 	//! start time of the simulation [day]
 	ttt_t	start_time;
 	//! length of the simulation [day]
@@ -94,7 +91,6 @@ public:
 	var_t	hit_centrum_dst;
 	//! two bodies collide when their mutual distance is smaller than the sum of their radii multiplied by this number. Real physical collision corresponds to the value of 1.0.
 	var_t	collision_factor;
-
 
 public:
 	options(int argc, const char** argv);

@@ -25,6 +25,7 @@
 #include "ode.h"
 #include "pp_disk.h"
 #include "options.h"
+#include "tools.h"
 
 using namespace std;
 
@@ -264,8 +265,12 @@ int device_query(int argc, const char **argv)
 
 void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, std::ostream& log_f)
 {
+	char time_stamp[20];
+	get_time_stamp(time_stamp);
+
 	ttt_t t = ppd->get_currt();
 	ttt_t avg_dt = (t - opt->start_time)/(var_t)intgr->get_n_step();
+	log_f << time_stamp << ' ';
 	log_f << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << t << " [day] average dt: " << setprecision(10) << setw(16) << avg_dt << " [d]\t";
 	log_f << setprecision(5) << setw(6) << (t/opt->stop_time)*100.0 << " % done" << endl;
 

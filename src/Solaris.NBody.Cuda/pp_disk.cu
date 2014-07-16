@@ -616,18 +616,18 @@ void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
 //}
 
 static __global__
-void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
+	void	calculate_grav_accel_kernel(ttt_t t, interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce, pp_disk::event_data_t* events)
 {
 	const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (bodyIdx < iBound.sink.y) {
+	if (params[bodyIdx].active && bodyIdx < iBound.sink.y) {
 		vec_t ai;
 		vec_t dVec;
 		vec_t ci = coor[bodyIdx];
 		ai.x = ai.y = ai.z = ai.w = 0.0;
 		for (int j = iBound.source.x; j < iBound.source.y; j++) 
 		{
-			if (j == bodyIdx) {
+			if (j == bodyIdx || !params[bodyIdx].active) {
 				continue;
 			}
 	
@@ -637,6 +637,20 @@ void	calculate_grav_accel_kernel(interaction_bound iBound, const pp_disk::param_
 
 			dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
 			var_t r = sqrt(dVec.w);								// = r
+
+			if (r < events[bodyIdx].d)
+			{
+				events[bodyIdx].d = r;
+				events[bodyIdx].t = t;
+				events[bodyIdx].id.x = params[bodyIdx].id;
+				events[bodyIdx].id.y = params[j].id;
+				events[bodyIdx].idx.x = bodyIdx;
+				events[bodyIdx].idx.y = j;
+				events[bodyIdx].r1 = ci;
+				events[bodyIdx].v1 = velo[bodyIdx];
+				events[bodyIdx].r2 = coor[j];
+				events[bodyIdx].v2 = velo[j];
+			}
 
 			dVec.w = params[j].mass / (r*dVec.w);
 
@@ -866,6 +880,7 @@ void pp_disk::allocate_vectors(bool has_gas)
 	h_y[0].resize(ndim * nBodies->total);
 	h_y[1].resize(ndim * nBodies->total);
 
+	d_event.resize(nBodies->total);
 	if (has_gas) {
 		acceGasDrag.resize(ndim * nBodies->n_gas_drag());
 		if (0 < (nBodies->rocky_planet + nBodies->proto_planet)) {
@@ -909,7 +924,7 @@ void pp_disk::calculate_grav_accel(interaction_bound iBound, const param_t* para
 	}
 }
 
-cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, const vec_t *coor, vec_t *acce)
+cudaError_t pp_disk::call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events)
 {
 	cudaError_t cudaStatus = cudaSuccess;
 
@@ -928,7 +943,7 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 #ifdef STOP_WATCH
 		s_watch.cuda_start();
 #endif
-		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+		calculate_grav_accel_kernel<<<grid, block>>>(currt, iBound, params, coor, velo, acce, events);
 #if 0
 		int	nuw		= 16;
 		grid.x		= 1;
@@ -961,7 +976,7 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 #ifdef STOP_WATCH
 		s_watch.cuda_start();
 #endif
-		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+		calculate_grav_accel_kernel<<<grid, block>>>(currt, iBound, params, coor, velo, acce, events);
 #ifdef STOP_WATCH
 		s_watch.cuda_stop();
 		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_SELF_INTERACTING] = s_watch.get_cuda_ellapsed_time();
@@ -983,7 +998,7 @@ cudaError_t pp_disk::call_calculate_grav_accel_kernel(const param_t *params, con
 #ifdef STOP_WATCH
 		s_watch.cuda_start();
 #endif
-		calculate_grav_accel_kernel<<<grid, block>>>(iBound, params, coor, acce);
+		calculate_grav_accel_kernel<<<grid, block>>>(currt, iBound, params, coor, velo, acce, events);
 #ifdef STOP_WATCH
 		s_watch.cuda_stop();
 		elapsed[PP_DISK_KERNEL_CALCULATE_GRAV_ACCEL_NON_INTERACTING] = s_watch.get_cuda_ellapsed_time();
@@ -1059,7 +1074,7 @@ cudaError_t pp_disk::call_calculate_migrateI_accel_kernel(ttt_t time, param_t* p
 	return cudaStatus;
 }
 
-void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy)
+void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy)
 {
 	cudaError_t cudaStatus = cudaSuccess;
 
@@ -1081,19 +1096,28 @@ void pp_disk::calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::v
 		}
 		break;
 	case 1:
+		if (r == 0)
+		{
+			// Set the d field of the event_data_t struct to the threshold distance when collision must be looked for
+
+		}
 		// Make some shortcuts / aliases
-		param_t* params = (param_t*)p.data().get();
-		vec_t* coor		= (vec_t*)y[0].data().get();
-		vec_t* velo		= (vec_t*)y[1].data().get();
-		vec_t* acce		= (vec_t*)dy.data().get();
+		param_t* params		 = (param_t*)p.data().get();
+		event_data_t* events = (event_data_t*)d_event.data().get();
+		vec_t* coor			 = (vec_t*)y[0].data().get();
+		vec_t* velo			 = (vec_t*)y[1].data().get();
+		vec_t* acce			 = (vec_t*)dy.data().get();
 		// Calculate accelerations originated from the gravitational force
-		call_calculate_grav_accel_kernel(params, coor, acce);
+		call_calculate_grav_accel_kernel(currt, params, coor, velo, acce, events);
+
+		h_event = d_event;
+		events = (event_data_t*)h_event.data();
 
 		if (0 != h_gasDisk && 0 < nBodies->n_gas_drag()) {
 			vec_t *aGD = (vec_t*)acceGasDrag.data().get();
 			if (0 == r) {
 				// Calculate accelerations originated from gas drag
-				call_calculate_drag_accel_kernel(t, params, coor, velo, aGD);
+				call_calculate_drag_accel_kernel(currt, params, coor, velo, aGD);
 				cudaStatus = HANDLE_ERROR(cudaGetLastError());
 				if (cudaSuccess != cudaStatus) {
 					throw nbody_exception("call_calculate_drag_accel_kernel failed", cudaStatus);

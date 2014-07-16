@@ -1,4 +1,5 @@
 #include <cctype>
+#include <ctime>
 
 #include "tools.h"
 
@@ -49,4 +50,10 @@ void trim(string& str)
 {
 	trim_right(str);
 	trim_left(str);
+}
+
+void get_time_stamp(char *time_stamp)
+{
+	time_t now = time(0);
+	strftime(time_stamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
 }

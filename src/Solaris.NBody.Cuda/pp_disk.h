@@ -114,6 +114,18 @@ public:
 		var_t	migStopAt;
 	} param_t;
 
+	typedef struct event_data
+	{
+		ttt_t	t;			//!< Time of the event
+		int2_t	id;			//!< ids of the bodies
+		int2_t	idx;		//!< indicies of the bodies
+		var_t	d;			//!< distance of the bodies
+		vec_t	r1;			//!< Position of body 1
+		vec_t	v1;			//!< Velocity of body 1
+		vec_t	r2;			//!< Position of body 2
+		vec_t	v2;			//!< Velocity of body 2
+	} event_data_t;
+
 	typedef struct orbelem
 	{
 		//! Semimajor-axis of the body
@@ -138,8 +150,13 @@ public:
 	typedef thrust::host_vector<orbelem_t>		h_orbelem_t;
 	typedef thrust::device_vector<orbelem_t>	d_orbelem_t;
 
+	typedef thrust::host_vector<event_data_t>	h_event_data_t;
+	typedef thrust::device_vector<event_data_t>	d_event_data_t;
+
 	d_orbelem_t			d_orbelem;
 	h_orbelem_t			h_orbelem;
+	h_event_data_t		h_event;
+	d_event_data_t		d_event;
 
 	gas_disk			*h_gasDisk;
 	gas_disk			*d_gasDisk;
@@ -149,7 +166,7 @@ public:
 
 	h_orbelem_t calculate_orbelem(int_t refBodyId);
 
-	void calculate_dy(int i, int r, ttt_t t, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy);
+	void calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy);
 
 	//! Loads the initial position and velocity of the bodies (first input version).
 	/*   
@@ -203,11 +220,14 @@ private:
 
 	//! Calls the kernel that calculates the accelerations from gravitational
 	/*  interactions.
+		\param currt Time of the evaluation of the gravitational force
 		\param params Vector of parameters of the bodies
 		\param coor Vector of coordinates of the bodies
+		\param velo Vector of velocities of the bodies
 		\param acce Will hold the accelerations for each body
+		\param events Will hold the data for collision, ejection and hit-centrum check
 	*/
-	cudaError_t call_calculate_grav_accel_kernel(const param_t* params, const vec_t* coor, vec_t* acce);
+	cudaError_t call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events);
 	//! Calls the kernel that calculates the acceleration due to drag force.
 	/*
 		\param time The actual time of the simulation
