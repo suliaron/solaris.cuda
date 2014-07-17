@@ -51,6 +51,23 @@ typedef enum phys_prop_name
 			DRAG_COEFF
 		} phys_prop_name_t;
 
+typedef enum threshold
+		{
+			HIT_CENTRUM_DISTANCE,
+			EJECTION_DISTANCE,
+			COLLISION_FACTOR,
+			THRESHOLD_N
+		} threshold_t;
+
+typedef enum event_name
+		{
+			NONE,
+			HIT_CENTRUM,
+			EJECTION,
+			CLOSE_ENCOUNTER,
+			COLLISION,
+			EVENT_NAME_N
+		} event_name_t;
 
 #ifdef STOP_WATCH
 typedef enum pp_disk_kernel
@@ -76,13 +93,11 @@ class pp_disk : public ode
 public:
 
 #ifdef STOP_WATCH
-
 	stop_watch		s_watch;
 	var_t			elapsed[PP_DISK_KERNEL_N];
 	static string	kernel_name[PP_DISK_KERNEL_N];
 
 	void			clear_elapsed();
-	
 #endif
 
 	// Type for parameters
@@ -116,6 +131,7 @@ public:
 
 	typedef struct event_data
 	{
+		event_name_t	event_name;	//!< Name of the event
 		ttt_t	t;			//!< Time of the event
 		int2_t	id;			//!< ids of the bodies
 		int2_t	idx;		//!< indicies of the bodies
@@ -153,10 +169,16 @@ public:
 	typedef thrust::host_vector<event_data_t>	h_event_data_t;
 	typedef thrust::device_vector<event_data_t>	d_event_data_t;
 
+	unsigned int								h_event_indexer;
+	unsigned int								*d_event_indexer;
+
 	d_orbelem_t			d_orbelem;
 	h_orbelem_t			h_orbelem;
-	h_event_data_t		h_event;
-	d_event_data_t		d_event;
+
+	h_event_data_t		h_potential_event;		//!< Vector on the host containing data for possible events
+	d_event_data_t		d_potential_event;		//!< Vector on the device containing data for possible events
+	h_event_data_t		h_occured_event;		//!< Vector on the host containing data for occured events
+	d_event_data_t		d_occured_event;		//!< Vector on the device containing data for occured events
 
 	gas_disk			*h_gasDisk;
 	gas_disk			*d_gasDisk;
@@ -217,6 +239,19 @@ private:
 	d_var_t				acceMigrateII;
 
 	void allocate_vectors(bool has_gas);
+	void clear_event_indexer();
+
+	//! Sets the grid and block for the kernel launch
+	void set_kernel_launch_param(int n_data);
+
+	//! Set the d field of the event_data_t to value
+	/*
+		\param value The the d field will be set to this value
+	*/
+	void call_set_d_field_of_event_data_t_kernel(var_t value);
+
+	//! Checks wether an event (collision, ejection etc.) has occured
+	void call_check_events_kernel(const param_t *params, event_data_t* potential_event, event_data_t* occured_event);
 
 	//! Calls the kernel that calculates the accelerations from gravitational
 	/*  interactions.
@@ -227,7 +262,7 @@ private:
 		\param acce Will hold the accelerations for each body
 		\param events Will hold the data for collision, ejection and hit-centrum check
 	*/
-	cudaError_t call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events);
+	void call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events);
 	//! Calls the kernel that calculates the acceleration due to drag force.
 	/*
 		\param time The actual time of the simulation
@@ -236,7 +271,7 @@ private:
 		\param velo Vector of velocities of the bodies
 		\param acce Will hold the accelerations for each body
 	*/
-	cudaError_t call_calculate_drag_accel_kernel(ttt_t time, const param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce);
+	void call_calculate_drag_accel_kernel(ttt_t time, const param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce);
 
 	//! Calls the kernel that calculates the acceleration due to type I migration.
 	/*
@@ -246,7 +281,7 @@ private:
 		\param velo Vector of velocities of the bodies
 		\param acce Will hold the accelerations for each body
 	*/
-	cudaError_t call_calculate_migrateI_accel_kernel(ttt_t time, param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce);
+	void call_calculate_migrateI_accel_kernel(ttt_t time, param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce);
 };
 
 static __host__ __device__ void		shift_into_range(var_t lower, var_t upper, var_t* value);

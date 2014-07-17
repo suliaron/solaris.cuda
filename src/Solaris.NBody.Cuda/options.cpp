@@ -289,6 +289,9 @@ options::options(int argc, const char** argv)
 		parse_params(gasDisk_str, (void*)this->gasDisk, set_gasdisk_param);
 	}
 	stop_time = start_time + sim_length;
+	
+	// TODO set __constant__ var_t d_cst_common[THRESHOLD_N];
+
 }
 
 options::~options() 

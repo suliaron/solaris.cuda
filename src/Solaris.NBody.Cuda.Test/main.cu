@@ -29,6 +29,8 @@
 
 using namespace std;
 
+__constant__ var_t d_cst_common[THRESHOLD_N];
+
 ///////////////////////////////
 
 /*
