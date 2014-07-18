@@ -5,6 +5,8 @@
 #include "config.h"
 #include "interaction_bound.h"
 #include "ode.h"
+#include "options.h"
+
 #ifdef STOP_WATCH
 #include "stop_watch.h"
 #endif
@@ -51,21 +53,13 @@ typedef enum phys_prop_name
 			DRAG_COEFF
 		} phys_prop_name_t;
 
-typedef enum threshold
-		{
-			HIT_CENTRUM_DISTANCE,
-			EJECTION_DISTANCE,
-			COLLISION_FACTOR,
-			THRESHOLD_N
-		} threshold_t;
-
 typedef enum event_name
 		{
-			NONE,
-			HIT_CENTRUM,
-			EJECTION,
-			CLOSE_ENCOUNTER,
-			COLLISION,
+			EVENT_NAME_NONE,
+			EVENT_NAME_HIT_CENTRUM,
+			EVENT_NAME_EJECTION,
+			EVENT_NAME_CLOSE_ENCOUNTER,
+			EVENT_NAME_COLLISION,
 			EVENT_NAME_N
 		} event_name_t;
 
@@ -171,6 +165,7 @@ public:
 
 	unsigned int								h_event_indexer;
 	unsigned int								*d_event_indexer;
+	unsigned int								n_event;
 
 	d_orbelem_t			d_orbelem;
 	h_orbelem_t			h_orbelem;
@@ -205,6 +200,7 @@ public:
 	//! Print all bodies' id, mass, radius, density, position and velocity vector
 	int print_positions(ostream& sout);
 	int print_orbelem(ostream& sout);
+	void cpy_threshold_values(const var_t *h_cst_common);
 
 	void transform_to_bc();
 	//! Computes the total mass of the system
@@ -228,6 +224,12 @@ public:
 	*/
 	void calculate_grav_accel(interaction_bound iBound, const param_t* params, const vec_t* coor, vec_t* acce);
 
+	void call_check_hit_centrum_ejection_kernel();
+	//! Checks whether any collisions have occured
+	void call_check_collision_kernel();
+
+	void handle_hit_centrum_ejection();
+
 private:
 	dim3	grid;
 	dim3	block;
@@ -250,8 +252,6 @@ private:
 	*/
 	void call_set_d_field_of_event_data_t_kernel(var_t value);
 
-	//! Checks wether an event (collision, ejection etc.) has occured
-	void call_check_events_kernel(const param_t *params, event_data_t* potential_event, event_data_t* occured_event);
 
 	//! Calls the kernel that calculates the accelerations from gravitational
 	/*  interactions.

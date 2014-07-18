@@ -21,6 +21,7 @@
 #include "rungekuttanystrom.h"
 #include "rkf7.h"
 
+
 void set_parameters_param(string& key, string& value, void* data, bool verbose)
 {
 	static char n_call = 0;
@@ -109,19 +110,19 @@ void set_parameters_param(string& key, string& value, void* data, bool verbose)
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->ejection_dst = atof(value.c_str());
+		opt->h_cst_common[THRESHOLD_EJECTION_DISTANCE] = atof(value.c_str());
 	}
     else if (key == "hit_centrum") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->hit_centrum_dst = atof(value.c_str());
+		opt->h_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE]  = atof(value.c_str());
 	}
     else if (key == "collision_factor") {
 		if (!is_number(value)) {
 			throw nbody_exception("Invalid number at: " + key);
 		}
-		opt->collision_factor = atof(value.c_str());
+		opt->h_cst_common[THRESHOLD_COLLISION_FACTOR]  = atof(value.c_str());
 	}
 	else {
 		throw nbody_exception("Invalid parameter :" + key + ".");
@@ -290,8 +291,6 @@ options::options(int argc, const char** argv)
 	}
 	stop_time = start_time + sim_length;
 	
-	// TODO set __constant__ var_t d_cst_common[THRESHOLD_N];
-
 }
 
 options::~options() 
@@ -321,6 +320,10 @@ void options::create_default_options()
 	filename		= "";
 	random			= true;
 	gasDisk			= 0;
+
+	h_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE] = 0.0;
+	h_cst_common[THRESHOLD_EJECTION_DISTANCE] = 1.0e8;
+	h_cst_common[THRESHOLD_COLLISION_FACTOR] = 0.0;
 }
 
 void options::print_usage()
@@ -703,6 +706,7 @@ pp_disk*	options::create_pp_disk()
 		get_number_of_bodies(bodylist_path);
 		ppd = new pp_disk(nBodies, (gasDisk == 0 ? false : true), start_time);
 		ppd->load(bodylist_path);
+		ppd->cpy_threshold_values(h_cst_common);
 	}
 	else
 	{

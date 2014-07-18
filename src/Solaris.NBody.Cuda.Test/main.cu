@@ -29,8 +29,6 @@
 
 using namespace std;
 
-__constant__ var_t d_cst_common[THRESHOLD_N];
-
 ///////////////////////////////
 
 /*
@@ -308,6 +306,12 @@ int main(int argc, const char** argv)
 		ppd->print_positions(*pos_f);
 		while (currt <= opt.stop_time)
 		{
+			ppd->call_check_hit_centrum_ejection_kernel();
+			if (ppd->n_event > 0)
+			{
+				ppd->handle_hit_centrum_ejection();
+			}
+
 			if (fabs(ps) >= opt.output_interval)
 			{
 				ps = 0.0;
@@ -322,6 +326,7 @@ int main(int argc, const char** argv)
 			dt = intgr->step();
 			ps += fabs(dt);
 			currt = ppd->get_currt();
+
 		}
 		// Save final conditions to the output file
 		ppd->print_positions(*pos_f);
