@@ -584,6 +584,7 @@ static __global__
 								pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
 {
 	int bodyIdx = threadIdx.x + blockIdx.x * blockDim.x;
+	printf("bodyIdx: %10d\n", bodyIdx);
 	
 	//if (params[bodyIdx].active && bodyIdx < n_total)
 	//{
@@ -1092,6 +1093,10 @@ void pp_disk::call_check_hit_centrum_ejection_kernel()
 	}
 
 	cudaMemcpy(&n_event, d_event_indexer, sizeof(n_event), cudaMemcpyDeviceToHost);
+	cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
 }
 
 void pp_disk::call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events)
@@ -1321,7 +1326,15 @@ void pp_disk::handle_collision_pair(event_data_t* event_data)
 	vec_t* velo = (vec_t*)d_y[1].data().get();
 	
 	cudaMemcpy(coor + survivIdx*sizeof(vec_t), &r0, sizeof(vec_t), cudaMemcpyHostToDevice);
+	cudaError_t cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
 	cudaMemcpy(velo + survivIdx*sizeof(vec_t), &v0, sizeof(vec_t), cudaMemcpyHostToDevice);
+	cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
 
 	// Update mass, density and radius of survivor
 	h_params[survivIdx].mass	= mass;
@@ -1331,7 +1344,16 @@ void pp_disk::handle_collision_pair(event_data_t* event_data)
 	h_params[mergerIdx].active = false;
 
 	cudaMemcpy(d_params + survivIdx*sizeof(param_t), &h_params[survivIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+	cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
+	// TODO itt romlik el!!
 	cudaMemcpy(d_params + mergerIdx*sizeof(param_t), &h_params[mergerIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+	cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
 }
 
 void pp_disk::cpy_data_to_device_after_collision()
