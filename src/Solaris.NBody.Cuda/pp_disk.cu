@@ -21,6 +21,7 @@
 #include "nbody_exception.h"
 #include "number_of_bodies.h"
 #include "pp_disk.h"
+#include "tools.h"
 
 #define THREADS_PER_BLOCK	256
 
@@ -568,10 +569,10 @@ void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
 }
 
 static __global__
-void set_d_field_of_event_data_t(int_t n_data, pp_disk::event_data_t* events, var_t value)
+void set_d_field_of_event_data_t_kernel(int_t n_total, pp_disk::event_data_t* events, var_t value)
 {
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
-	if (tid < n_data)
+	if (tid < n_total)
 	{
 		events[tid].event_name = EVENT_NAME_NONE;
 		events[tid].d = value;
@@ -579,33 +580,37 @@ void set_d_field_of_event_data_t(int_t n_data, pp_disk::event_data_t* events, va
 }
 
 static __global__
-	void check_collision(int_t n_total, const pp_disk::param_t* params, const pp_disk::event_data_t* potential_event, pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
+	void check_collision_kernel(int_t n_total, const pp_disk::param_t* params, const pp_disk::event_data_t* pot_event, 
+								pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
 {
 	int bodyIdx = threadIdx.x + blockIdx.x * blockDim.x;
-	unsigned int i = 0;
-	if (params[bodyIdx].active && bodyIdx < n_total)
-	{
-		if (potential_event[bodyIdx].event_name == EVENT_NAME_CLOSE_ENCOUNTER)
-		{
-			i = atomicInc(event_indexer, 1);
-			int2_t idx = potential_event[bodyIdx].idx;
-			var_t tmp = d_cst_common[THRESHOLD_COLLISION_FACTOR] * (params[idx.x].radius + params[idx.y].radius);
-			bool collision = potential_event[bodyIdx].d < tmp ? true : false;
-			if (collision)
-			{
-				occured_event[i].event_name = EVENT_NAME_COLLISION;
-				occured_event[i] = potential_event[bodyIdx];
-			}
-		}
-	}
+	
+	//if (params[bodyIdx].active && bodyIdx < n_total)
+	//{
+	//	if (pot_event[bodyIdx].event_name == EVENT_NAME_CLOSE_ENCOUNTER)
+	//	{
+	//		int2_t idx = pot_event[bodyIdx].idx;
+	//		var_t tmp = d_cst_common[THRESHOLD_COLLISION_FACTOR] * (params[idx.x].radius + params[idx.y].radius);
+	//		bool collision = pot_event[bodyIdx].d < tmp ? true : false;
+	//		if (collision)
+	//		{
+	//			unsigned int i = atomicAdd(event_indexer, 1);
+	//			printf("d/tmp = %10lf\t%d COLLISION detected. bodyIdx0: %d bodyIdx1: %d\n", pot_event[bodyIdx].d/tmp, i, bodyIdx, occured_event[i].idx.y);
+
+	//			occured_event[i].event_name = EVENT_NAME_COLLISION;
+	//			occured_event[i] = pot_event[bodyIdx];
+	//		}
+	//	}
+	//}
 }
 
 static __global__
-	void check_hit_centrum_ejection(int_t n_total, ttt_t currt, const pp_disk::param_t* params, const vec_t* coor, const vec_t* velo, pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
+	void check_hit_centrum_ejection_kernel(int_t n_total, ttt_t t, const vec_t* coor, const vec_t* velo, 
+										   pp_disk::param_t* params, pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
 {
 	int bodyIdx = threadIdx.x + blockIdx.x * blockDim.x;
-	unsigned int i = 0;
-	if (params[bodyIdx].active && bodyIdx < n_total)
+	
+	if (bodyIdx > 0 && params[bodyIdx].active && bodyIdx < n_total)
 	{
 		vec_t dVec;
 
@@ -614,14 +619,16 @@ static __global__
 		dVec.z = coor[bodyIdx].z - coor[0].z;
 		dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
 
-		printf("bodyIdx: %.10d\tr = %.15lf\n", bodyIdx, sqrt(dVec.w));
-
 		if (dVec.w > SQR(d_cst_common[THRESHOLD_EJECTION_DISTANCE]))
 		{
-			i = atomicInc(event_indexer, 1);
+			unsigned int i = atomicAdd(event_indexer, 1);
+			printf("r2 = %10lf\t%d EJECTION detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
+
+			params[bodyIdx].active = false;
+
 			occured_event[i].event_name = EVENT_NAME_EJECTION;
 			occured_event[i].d = sqrt(dVec.w);
-			occured_event[i].t = currt;
+			occured_event[i].t = t;
 			occured_event[i].id.x = 0;
 			occured_event[i].id.y = params[bodyIdx].id;
 			occured_event[i].idx.x = 0;
@@ -633,10 +640,14 @@ static __global__
 		}
 		else if (dVec.w < SQR(d_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE]))
 		{
-			i = atomicInc(event_indexer, 1);
+			unsigned int i = atomicAdd(event_indexer, 1);
+			printf("r2 = %10lf\t%d HIT_CENTRUM detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
+
+			params[bodyIdx].active = false;
+
 			occured_event[i].event_name = EVENT_NAME_HIT_CENTRUM;
 			occured_event[i].d = sqrt(dVec.w);
-			occured_event[i].t = currt;
+			occured_event[i].t = t;
 			occured_event[i].id.x = 0;
 			occured_event[i].id.y = params[bodyIdx].id;
 			occured_event[i].idx.x = 0;
@@ -648,56 +659,6 @@ static __global__
 		}
 	}
 }
-
-//__constant__ int_t kernel_param[4];
-//
-//static __global__
-//void	calculate_grav_accel_trial_kernel(/*interaction_bound iBound, */const pp_disk::param_t* params, const vec_t* coor, vec_t* acce)
-//{
-//	//const int bodyIdx = iBound.sink.x + blockIdx.x * blockDim.x + threadIdx.x;
-//	const int bodyIdx = kernel_param[0] + blockIdx.x * blockDim.x + threadIdx.x;
-//
-//	__shared__ var_t data[20];
-//
-//	//vec_t ai;
-//	//if (bodyIdx < iBound.sink.y) {
-//	//if (bodyIdx < kernel_param[1]) {
-//		//vec_t dVec; = data[0..3]
-//		//vec_t ci = coor[bodyIdx];
-//		data[4] = coor[bodyIdx].x;
-//		data[5] = coor[bodyIdx].y;
-//		data[6] = coor[bodyIdx].z;
-//		//data[7] = coor[bodyIdx].w;
-//
-//		//ai = acce[bodyIdx]; = data[8..11]
-//
-//		data[8] = data[9] =  data[10] =  data[11] = 0.0;
-//		//for (int j = kernel_param[2]; j < kernel_param[3]; j++) 
-//		{
-//			//if (j == bodyIdx) {
-//			//	continue;
-//			//}
-//			int j = 1;
-//	
-//			data[0] = coor[j].x - data[4];
-//			data[1] = coor[j].y - data[5];
-//			data[2] = coor[j].z - data[6];;
-//
-//			data[3] = SQR(data[0]) + SQR(data[1]) + SQR(data[2]);	// = r2
-//			//var_t r = sqrt(data[3]);								// = r
-//			var_t r = 1;
-//
-//			data[3] = params[j].mass / (r*data[3]);
-//
-//			data[8 ] += data[3] * data[0];
-//			data[9 ] += data[3] * data[1];
-//			data[10] += data[3] * data[2];
-//		}
-//	//}
-//	acce[bodyIdx].x = data[8];
-//	acce[bodyIdx].y = data[9];
-//	acce[bodyIdx].z = data[10];
-//}
 
 static __global__
 	void	calculate_grav_accel_kernel(ttt_t t, interaction_bound iBound, const pp_disk::param_t* params, const vec_t* coor, const vec_t* velo, vec_t* acce, pp_disk::event_data_t* events)
@@ -722,7 +683,7 @@ static __global__
 			dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
 			var_t r = sqrt(dVec.w);								// = r
 
-			if (bodyIdx > 0 && r < events[bodyIdx].d)
+			if (bodyIdx > 0 && bodyIdx < j && r < events[bodyIdx].d)
 			{
 				events[bodyIdx].event_name = EVENT_NAME_CLOSE_ENCOUNTER;
 				events[bodyIdx].d = r;
@@ -930,12 +891,40 @@ void	calculate_orbelem_kernel(
 
 
 __global__
-	void print_constant_mem()
+	void print_constant_mem_kernel()
 {
 	printf("print_constant_mem kernel:\n");
 	printf("d_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE] : %lf\n", d_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE]);
 	printf("d_cst_common[THRESHOLD_EJECTION_DISTANCE] : %lf\n", d_cst_common[THRESHOLD_EJECTION_DISTANCE]);
 	printf("d_cst_common[THRESHOLD_COLLISION_FACTOR] : %lf\n", d_cst_common[THRESHOLD_COLLISION_FACTOR]);
+}
+
+__global__
+	void print_param_kernel(int n, const pp_disk::param_t *params)
+{
+	printf("params[%d].id           : %20d\n", n, params[n].id);
+	printf("params[%d].active       : %20s\n", n, params[n].active ? "true" : "false");
+	printf("params[%d].body_type    : %20d\n", n, params[n].body_type);
+	printf("params[%d].mass         : %20.15lf\n", n, params[n].mass);
+	printf("params[%d].density      : %20.15lf\n", n, params[n].density);
+	printf("params[%d].radius       : %20.15lf\n", n, params[n].radius);
+	printf("params[%d].cd           : %20.15lf\n", n, params[n].cd);
+	printf("params[%d].epoch        : %20.15lf\n", n, params[n].epoch);
+	printf("params[%d].gamma_epstein: %20.15lf\n", n, params[n].gamma_epstein);
+	printf("params[%d].gamma_stokes : %20.15lf\n", n, params[n].gamma_stokes);
+	printf("params[%d].migType      : %20d\n", n, params[n].migType);
+	printf("params[%d].migStopAt    : %20.15lf\n", n, params[n].migStopAt);
+}
+
+__global__
+	void print_coor_velo_kernel(int n, const vec_t* coor, const vec_t* velo)
+{
+	printf("coor[%d].x: %20.15lf\n", n, coor[n].x);
+	printf("coor[%d].y: %20.15lf\n", n, coor[n].y);
+	printf("coor[%d].z: %20.15lf\n", n, coor[n].z);
+	printf("velo[%d].x: %20.15lf\n", n, velo[n].x);
+	printf("velo[%d].y: %20.15lf\n", n, velo[n].y);
+	printf("velo[%d].z: %20.15lf\n", n, velo[n].z);
 }
 
 /****************** KERNEL functions ends here ******************/
@@ -971,7 +960,6 @@ void pp_disk::allocate_vectors(bool has_gas)
 	int	npar = sizeof(param_t) / sizeof(var_t);
 	h_p.resize(npar * nBodies->total);
 
-	// Aliases to coordinates and velocities
 	int ndim = sizeof(vec_t) / sizeof(var_t);
 	h_y[0].resize(ndim * nBodies->total);
 	h_y[1].resize(ndim * nBodies->total);
@@ -984,7 +972,10 @@ void pp_disk::allocate_vectors(bool has_gas)
 	d_occured_event.resize(max_n_event);
 
 	if (has_gas) {
-		acceGasDrag.resize(ndim * nBodies->n_gas_drag());
+		if (0 < nBodies->n_gas_drag()) {
+			acceGasDrag.resize(ndim * nBodies->n_gas_drag());
+		}
+		
 		if (0 < (nBodies->rocky_planet + nBodies->proto_planet)) {
 			acceMigrateI.resize(ndim * (nBodies->rocky_planet + nBodies->proto_planet));
 		}
@@ -1053,10 +1044,10 @@ void pp_disk::call_set_d_field_of_event_data_t_kernel(var_t value)
 	set_kernel_launch_param(nBodyToCalculate);
 	event_data_t* events = (event_data_t*)d_potential_event.data().get();
 
-	set_d_field_of_event_data_t<<<grid, block>>>(nBodyToCalculate, events, value);
+	set_d_field_of_event_data_t_kernel<<<grid, block>>>(nBodyToCalculate, events, value);
 	cudaError_t  cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("set_d_field_of_event_data_t failed", cudaStatus);
+		throw nbody_exception("set_d_field_of_event_data_t_kernel failed", cudaStatus);
 	}
 }
 
@@ -1064,24 +1055,21 @@ void pp_disk::call_check_collision_kernel()
 {
 	int	nBodyToCalculate = nBodies->total;
 
-	param_t* params		 = (param_t*)d_p.data().get();
-	vec_t* coor			 = (vec_t*)d_y[0].data().get();
-	vec_t* velo			 = (vec_t*)d_y[1].data().get();
+	param_t* params = (param_t*)d_p.data().get();
 	event_data_t* potential_event = (event_data_t*)d_potential_event.data().get();
 	event_data_t* occured_event = (event_data_t*)d_occured_event.data().get();
 
 	set_kernel_launch_param(nBodyToCalculate);
 
 	clear_event_indexer();
-	check_collision<<<grid, block>>>(nBodyToCalculate, params, potential_event, occured_event, d_event_indexer);
+	check_collision_kernel<<<grid, block>>>(nBodyToCalculate, params, potential_event, occured_event, d_event_indexer);
 
 	cudaError_t cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("check_events failed", cudaStatus);
+		throw nbody_exception("check_collision_kernel failed", cudaStatus);
 	}
 
 	cudaMemcpy(&n_event, d_event_indexer, sizeof(n_event), cudaMemcpyDeviceToHost);
-	clear_event_indexer();
 }
 
 void pp_disk::call_check_hit_centrum_ejection_kernel()
@@ -1096,22 +1084,14 @@ void pp_disk::call_check_hit_centrum_ejection_kernel()
 	set_kernel_launch_param(nBodyToCalculate);
 
 	clear_event_indexer();
-	check_hit_centrum_ejection<<<grid, block>>>(nBodyToCalculate, t, params, coor, velo, occured_event, d_event_indexer);
+	check_hit_centrum_ejection_kernel<<<grid, block>>>(nBodyToCalculate, t, coor, velo, params, occured_event, d_event_indexer);
 
 	cudaError_t cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("check_hit_centrum_ejection failed", cudaStatus);
+		throw nbody_exception("check_hit_centrum_ejection_kernel failed", cudaStatus);
 	}
 
 	cudaMemcpy(&n_event, d_event_indexer, sizeof(n_event), cudaMemcpyDeviceToHost);
-	clear_event_indexer();
-}
-
-void pp_disk::handle_hit_centrum_ejection()
-{
-	thrust::copy(d_occured_event.begin(), d_occured_event.begin() + n_event, h_occured_event.begin());
-	//h_occured_event = d_occured_event;
-	event_data_t* occured_event = (event_data_t*)h_occured_event.data();
 }
 
 void pp_disk::call_calculate_grav_accel_kernel(ttt_t currt, const param_t *params, const vec_t *coor, const vec_t *velo, vec_t *acce, event_data_t* events)
@@ -1263,6 +1243,112 @@ void pp_disk::call_calculate_migrateI_accel_kernel(ttt_t time, param_t* params,
 	}
 }
 
+void pp_disk::handle_hit_centrum_ejection()
+{
+	event_data_t* occured_event = (event_data_t*)h_occured_event.data();
+
+	param_t* params		 = (param_t*)h_p.data();
+	for (int i = 0; i < n_event; i++)
+	{
+		params[occured_event[i].idx.y].active = false;
+		if (occured_event[i].event_name == EVENT_NAME_HIT_CENTRUM)
+		{
+			handle_collision_pair(&occured_event[i]);
+		}
+	}
+}
+
+void pp_disk::get_survivor_merger_idx(int2_t id, int *survivIdx, int *mergerIdx)
+{
+	int i;
+	int2_t idx;
+
+	param_t* params = (param_t*)h_p.data();
+	for (i = 0; i < nBodies->total; i++)
+	{
+		if (params[i].id == id.x)
+		{
+			idx.x = i;
+			break;
+		}
+	}
+	i++;
+	for ( ; i < nBodies->total; i++)
+	{
+		if (params[i].id == id.y)
+		{
+			idx.y = i;
+		}
+	}
+
+	*survivIdx = idx.x;
+	*mergerIdx = idx.y;
+	if (params[*mergerIdx].mass > params[*survivIdx].mass)
+	{
+		*survivIdx = idx.y;
+		*mergerIdx = idx.x;
+	}
+}
+
+void pp_disk::handle_collision_pair(event_data_t* event_data)
+{
+	int survivIdx = 0;
+	int mergerIdx = 0;
+
+	get_survivor_merger_idx(event_data->id, &survivIdx, &mergerIdx);
+
+	param_t* h_params = (param_t*)h_p.data();
+	param_t* d_params = (param_t*)d_p.data().get();
+
+	var_t mass	 = h_params[survivIdx].mass + h_params[mergerIdx].mass;
+	var_t volume = 4.188790204786391 * (CUBE(h_params[mergerIdx].radius) + CUBE(h_params[survivIdx].radius));
+	var_t radius = pow(0.238732414637843 * volume, 1.0/3.0);
+	var_t density= mass / volume;
+
+	vec_t r0;
+	vec_t v0;
+
+	r0.x = (h_params[event_data->idx.x].mass * event_data->r1.x + h_params[event_data->idx.y].mass * event_data->r2.x) / mass;
+	r0.y = (h_params[event_data->idx.x].mass * event_data->r1.y + h_params[event_data->idx.y].mass * event_data->r2.y) / mass;
+	r0.z = (h_params[event_data->idx.x].mass * event_data->r1.z + h_params[event_data->idx.y].mass * event_data->r2.z) / mass;
+
+	v0.x = (h_params[event_data->idx.x].mass * event_data->v1.x + h_params[event_data->idx.y].mass * event_data->v2.x) / mass;
+	v0.y = (h_params[event_data->idx.x].mass * event_data->v1.y + h_params[event_data->idx.y].mass * event_data->v2.y) / mass;
+	v0.z = (h_params[event_data->idx.x].mass * event_data->v1.z + h_params[event_data->idx.y].mass * event_data->v2.z) / mass;
+
+	// Update position and velocity of survivor
+	vec_t* coor = (vec_t*)d_y[0].data().get();
+	vec_t* velo = (vec_t*)d_y[1].data().get();
+	
+	cudaMemcpy(coor + survivIdx*sizeof(vec_t), &r0, sizeof(vec_t), cudaMemcpyHostToDevice);
+	cudaMemcpy(velo + survivIdx*sizeof(vec_t), &v0, sizeof(vec_t), cudaMemcpyHostToDevice);
+
+	// Update mass, density and radius of survivor
+	h_params[survivIdx].mass	= mass;
+	h_params[survivIdx].density = density;
+	h_params[survivIdx].radius  = radius;
+
+	h_params[mergerIdx].active = false;
+
+	cudaMemcpy(d_params + survivIdx*sizeof(param_t), &h_params[survivIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_params + mergerIdx*sizeof(param_t), &h_params[mergerIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+}
+
+void pp_disk::cpy_data_to_device_after_collision()
+{
+}
+
+void pp_disk::handle_collision()
+{
+	event_data_t* occured_event = (event_data_t*)h_occured_event.data();
+
+	param_t* params		 = (param_t*)h_p.data();
+	for (int i = 0; i < n_event; i++)
+	{
+		handle_collision_pair(&occured_event[i]);
+	}
+}
+
 void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy)
 {
 	static var_t distance_threshold = 0.5; // AU
@@ -1301,14 +1387,14 @@ void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const st
 
 		// Calculate accelerations originated from the gravitational force
 		call_calculate_grav_accel_kernel(currt, params, coor, velo, acce, potential_event);
-		h_potential_event = d_potential_event;
-		event_data_t* alias_h_potential_event = (event_data_t*)h_potential_event.data();
 
-		call_check_hit_centrum_ejection_kernel();
-		h_occured_event = d_occured_event;
-		event_data_t* alias_h_occured_event = (event_data_t*)h_occured_event.data();
+		//h_potential_event = d_potential_event;
+		//event_data_t* alias_h_potential_event = (event_data_t*)h_potential_event.data();
 
-		cudaMemcpy(&n_event, d_event_indexer, sizeof(n_event), cudaMemcpyDeviceToHost);
+		//call_check_collision_kernel();
+
+		//h_occured_event = d_occured_event;
+		//event_data_t* alias_h_occured_event = (event_data_t*)h_occured_event.data();
 
 
 		if (0 != h_gasDisk && 0 < nBodies->n_gas_drag()) {
@@ -1452,7 +1538,6 @@ void pp_disk::transform_to_bc()
 
 	cout << "done" << endl;
 }
-
 
 void pp_disk::load(string path, int n)
 {
@@ -1781,6 +1866,47 @@ void pp_disk::generate_rand(var2_t disk)
 		}
 		coor[i] = rVec;
 		velo[i] = vVec;
+	}
+}
+
+void pp_disk::print_event_data(ostream& sout, ostream& log_f)
+{
+	static char sep = ' ';
+	static char *e_names[] = {"NONE", "HIT_CENTRUM", "EJECTION", "CLOSE_ENCOUNTER", "COLLISION"};
+
+	thrust::copy(d_occured_event.begin(), d_occured_event.begin() + n_event, h_occured_event.begin());
+	//h_occured_event = d_occured_event;
+	event_data_t* occured_event = (event_data_t*)h_occured_event.data();
+
+	param_t* params		 = (param_t*)h_p.data();
+	for (int i = 0; i < n_event; i++)
+	{
+		sout << occured_event[i].t << sep
+			 << e_names[occured_event[i].event_name] << sep
+			 << occured_event[i].id.x << sep
+			 << occured_event[i].id.y << sep
+			 << params[occured_event[i].idx.x].mass << sep
+			 << params[occured_event[i].idx.x].density << sep
+			 << params[occured_event[i].idx.x].radius << sep
+			 << occured_event[i].r1.x << sep
+			 << occured_event[i].r1.y << sep
+			 << occured_event[i].r1.z << sep
+			 << occured_event[i].v1.x << sep
+			 << occured_event[i].v1.y << sep
+			 << occured_event[i].v1.z << sep
+			 << params[occured_event[i].idx.y].mass << sep
+			 << params[occured_event[i].idx.y].density << sep
+			 << params[occured_event[i].idx.y].radius << sep
+			 << occured_event[i].r2.x << sep
+			 << occured_event[i].r2.y << sep
+			 << occured_event[i].r2.z << sep
+			 << occured_event[i].v2.x << sep
+			 << occured_event[i].v2.y << sep
+			 << occured_event[i].v2.z << sep << endl;
+
+		char time_stamp[20];
+		get_time_stamp(time_stamp);
+		log_f << time_stamp << sep << e_names[occured_event[i].event_name] << endl;
 	}
 }
 

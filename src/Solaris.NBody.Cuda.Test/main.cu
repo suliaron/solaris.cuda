@@ -263,7 +263,7 @@ int device_query(int argc, const char **argv)
     return (EXIT_SUCCESS);
 }
 
-void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, std::ostream& log_f)
+void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, ostream& log_f)
 {
 	char time_stamp[20];
 	get_time_stamp(time_stamp);
@@ -309,7 +309,14 @@ int main(int argc, const char** argv)
 			ppd->call_check_hit_centrum_ejection_kernel();
 			if (ppd->n_event > 0)
 			{
+				ppd->print_event_data(*event_f, *log_f);
 				ppd->handle_hit_centrum_ejection();
+			}
+			ppd->call_check_collision_kernel();
+			if (ppd->n_event > 0)
+			{
+				ppd->print_event_data(*event_f, *log_f);
+				ppd->handle_collision();
 			}
 
 			if (fabs(ps) >= opt.output_interval)

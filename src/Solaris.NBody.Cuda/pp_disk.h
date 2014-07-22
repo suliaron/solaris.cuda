@@ -228,7 +228,13 @@ public:
 	//! Checks whether any collisions have occured
 	void call_check_collision_kernel();
 
+	void print_event_data(ostream& sout, ostream& log);
 	void handle_hit_centrum_ejection();
+	void handle_collision();
+
+	void get_survivor_merger_idx(int2_t id, int *survivIdx, int *mergerIdx);
+	void handle_collision_pair(event_data_t* event_data);
+	void cpy_data_to_device_after_collision();
 
 private:
 	dim3	grid;
