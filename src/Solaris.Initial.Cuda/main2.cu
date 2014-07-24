@@ -319,7 +319,7 @@ void generate_pp(phys_prop_dist_t pp_d, pp_disk::param_t& param)
 	param.cd = generate_random(pp_d.item[DRAG_COEFF].limits.x, pp_d.item[DRAG_COEFF].limits.y, pp_d.item[DRAG_COEFF].pdf);
 }
 
-int generate_pp_disk(string path, body_disk_t& body_disk, output_version_t o_version)
+int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_version)
 {
 	static char sep = ' ';
 
@@ -450,7 +450,7 @@ void set_parameters_of_Dvorak_disk(body_disk_t& disk)
 	type = BODY_TYPE_TESTPARTICLE;
 }
 
-int parse_options(int argc, const char **argv, number_of_bodies **nBodies, string &outDir)
+int parse_options(int argc, const char **argv, number_of_bodies **nBodies, string &outDir, string &filename)
 {
 	int i = 1;
 
@@ -472,6 +472,10 @@ int parse_options(int argc, const char **argv, number_of_bodies **nBodies, strin
 			i++;
 			outDir = argv[i];
 		}
+		else if (p == "-f") {
+			i++;
+			filename = argv[i];
+		}
 		else {
 			cerr << "Invalid switch on command-line.";
 			return 1;
@@ -482,20 +486,21 @@ int parse_options(int argc, const char **argv, number_of_bodies **nBodies, strin
 	return 0;
 }
 
+//-o D:\Work\Projects\solaris.cuda\TestRun\Dvorak_disk -f Dvorak_disk.txt
 int main(int argc, const char **argv)
 {
 	body_disk_t disk;
 	string outDir;
 	string filename;
+	string path;
+
+	parse_options(argc, argv, 0, outDir, filename);
 
 	{
 		set_parameters_of_Dvorak_disk(disk);
-		outDir = "C:\\Work\\Projects\\solaris.cuda\\TestRun\\InputTest";
-		filename = "Dvorak_disk.txt";
+		path = combine_path(outDir, filename);
+		generate_pp_disk(path, disk, OUTPUT_VERSION_SECOND);
 	}
-	{
-	}
-	generate_pp_disk(combine_path(outDir, filename), disk, OUTPUT_VERSION_SECOND);
 
 	return 0;
 

@@ -312,7 +312,7 @@ int main(int argc, const char** argv)
 				ppd->print_event_data(*event_f, *log_f);
 				ppd->handle_hit_centrum_ejection();
 			}
-			//ppd->call_check_collision_kernel();
+			ppd->call_check_collision_kernel();
 			if (ppd->n_event > 0)
 			{
 				ppd->print_event_data(*event_f, *log_f);
