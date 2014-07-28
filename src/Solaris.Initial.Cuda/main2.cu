@@ -204,7 +204,7 @@ void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::para
 	case OUTPUT_VERSION_FIRST:
 		output << param->id << sep << epoch << sep;
 		output << param->mass << sep << param->radius << sep << param->density << sep << param->cd << sep;
-		output << param->migType << sep << param->migStopAt << sep;
+		output << param->mig_type << sep << param->mig_stop_at << sep;
 		output << r->x << sep << r->y << sep << r->z << sep;
 		output << v->x << sep << v->y << sep << v->z << sep;
 		output << endl;
@@ -215,7 +215,7 @@ void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::para
 			   << param->body_type << sep 
 			   << param->epoch << sep;
 		output << param->mass << sep << param->radius << sep << param->density << sep << param->cd << sep;
-		output << param->migType << sep << param->migStopAt << sep;
+		output << param->mig_type << sep << param->mig_stop_at << sep;
 		output << r->x << sep << r->y << sep << r->z << sep;
 		output << v->x << sep << v->y << sep << v->z << sep;
 		output << endl;
@@ -353,8 +353,8 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 					param0.epoch = 0.0;
 
 					generate_pp(body_disk.pp_d[body_type], param0);
-					param0.migType = body_disk.mig_type[bodyId];
-					param0.migStopAt = body_disk.stop_at[bodyId];
+					param0.mig_type = body_disk.mig_type[bodyId];
+					param0.mig_stop_at = body_disk.stop_at[bodyId];
 					print_body_record(output, body_disk.names[bodyId], t, &param0, &rVec, &vVec, o_version);
 				} /* if */
 				else 
@@ -365,8 +365,8 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 
 					generate_oe(body_disk.oe_d[body_type], oe);
 					generate_pp(body_disk.pp_d[body_type], param);
-					param.migType = body_disk.mig_type[bodyId];
-					param.migStopAt = body_disk.stop_at[bodyId];
+					param.mig_type = body_disk.mig_type[bodyId];
+					param.mig_stop_at = body_disk.stop_at[bodyId];
 
 					var_t mu = K2*(param0.mass + param.mass);
 					int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -390,6 +390,31 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 
 	return 0;
 }
+
+void load_binary(string& in_path, string& out_path)
+{
+	cout << "Loading " << in_path << " ... ";
+
+	ifstream input (in_path, ios::in|ios::binary);
+	ofstream output(out_path, ios_base::out);
+
+	if (input) {
+
+	}
+	else {
+		cerr << "Cannot open " << in_path << "." << endl;
+	}
+
+	if (input) {
+
+	}
+	else {
+		cerr << "Cannot open " << out_path << "." << endl;
+	}
+
+	cout << "done" << endl;
+}
+
 
 void set_parameters_of_Dvorak_disk(body_disk_t& disk)
 {

@@ -294,8 +294,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = 0.0;
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
+		params[i].mig_type = MIGRATION_TYPE_NO;
+		params[i].mig_stop_at = 0.0;
 
 		coor[i] = rVec;
 		velo[i] = vVec;
@@ -320,8 +320,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = 0.0;
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_II;
-		params[i].migStopAt = 1.0;
+		params[i].mig_type = MIGRATION_TYPE_TYPE_II;
+		params[i].mig_stop_at = 1.0;
 
 		var_t mu = K2*(params[0].mass + params[i].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -350,8 +350,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = 0.0;
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_I;
-		params[i].migStopAt = 0.4;
+		params[i].mig_type = MIGRATION_TYPE_TYPE_I;
+		params[i].mig_stop_at = 0.4;
 
 		var_t mu = K2*(params[0].mass + params[i].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -380,8 +380,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = 0.0;
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_I;
-		params[i].migStopAt = 0.4;
+		params[i].mig_type = MIGRATION_TYPE_TYPE_I;
+		params[i].mig_stop_at = 0.4;
 
 		var_t mu = K2*(params[0].mass + params[i].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -410,8 +410,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = generate_random(0.5, 4.0, pdf_const);
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
+		params[i].mig_type = MIGRATION_TYPE_NO;
+		params[i].mig_stop_at = 0.0;
 
 		var_t mu = K2*(params[0].mass + params[i].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -440,8 +440,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = generate_random(0.5, 4.0, pdf_const);
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
+		params[i].mig_type = MIGRATION_TYPE_NO;
+		params[i].mig_stop_at = 0.0;
 
 		var_t mu = K2*(params[0].mass + params[i].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
@@ -470,8 +470,8 @@ int populate_pp_disk(var2_t disk, const number_of_bodies *nBodies, pp_disk *ppd)
 		cd = 0.0;
 		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
 		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
+		params[i].mig_type = MIGRATION_TYPE_NO;
+		params[i].mig_stop_at = 0.0;
 
 		var_t mu = K2*(params[0].mass);
 		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);

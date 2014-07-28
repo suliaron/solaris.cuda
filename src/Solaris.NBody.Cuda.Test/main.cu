@@ -307,13 +307,13 @@ int main(int argc, const char** argv)
 		while (currt <= opt.stop_time)
 		{
 			ppd->call_check_hit_centrum_ejection_kernel();
-			if (ppd->n_event > 0)
+			if (ppd->get_n_event() > 0)
 			{
 				ppd->print_event_data(*event_f, *log_f);
 				ppd->handle_hit_centrum_ejection();
 			}
 			ppd->call_check_collision_kernel();
-			if (ppd->n_event > 0)
+			if (ppd->get_n_event() > 0)
 			{
 				ppd->print_event_data(*event_f, *log_f);
 				ppd->handle_collision();

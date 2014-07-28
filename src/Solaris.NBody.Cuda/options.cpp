@@ -277,12 +277,15 @@ options::options(int argc, const char** argv)
 {
 	create_default_options();
 	parse_options(argc, argv);
+	bodylist_path = combine_path(printoutDir, bodylist_filename);
 
-	if (parameters_path.length() > 0) {
+	if (parameters_filename.length() > 0) {
+		parameters_path = combine_path(printoutDir, parameters_filename);
 		load(parameters_path, parameters_str);
 		parse_params(parameters_str, (void*)this, set_parameters_param);
 	}
-	if (gasDisk_path.length() > 0) {
+	if (gasdisk_filename.length() > 0) {
+		gasDisk_path = combine_path(printoutDir, gasdisk_filename);
 		load(gasDisk_path, gasDisk_str);
 		// If default gas disk was created, delete it
 		delete[] gasDisk;
@@ -364,17 +367,23 @@ void options::parse_options(int argc, const char** argv)
 	while (i < argc) {
 		string p = argv[i];
 
-		if (     p == "-ip") {
+		// Print-out location
+		if (     p == "-o")	{
 			i++;
-			parameters_path = argv[i];
+			printoutDir = argv[i];
+			printoutToFile = true;
+		}
+		else if (p == "-ip") {
+			i++;
+			parameters_filename = argv[i];
 		}
 		else if (p == "-igd") {
 			i++;
-			gasDisk_path = argv[i];
+			gasdisk_filename = argv[i];
 		}
 		else if (p == "-ibl") {
 			i++;
-			bodylist_path = argv[i];
+			bodylist_filename = argv[i];
 		}
 		else if (p == "--verbose" || p == "-v") {
 			verbose = true;
@@ -732,6 +741,9 @@ pp_disk*	options::create_pp_disk()
 	ppd->t = start_time;
 	ppd->transform_to_bc();
 	ppd->copy_to_device();
+	// TODO: calculate automatically the threshold_distance_for_close_encounter
+	const var_t threshold_distance_for_close_encounter = 0.1; // AU
+	ppd->call_initialize_event_data_t_kernel(threshold_distance_for_close_encounter);
 
 	return ppd;
 }

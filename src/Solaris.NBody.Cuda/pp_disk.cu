@@ -569,7 +569,7 @@ void add_two_vector_kernel(int_t n, var_t *a, const var_t *b)
 }
 
 static __global__
-void set_d_field_of_event_data_t_kernel(int_t n_total, pp_disk::event_data_t* events, var_t value)
+void initialize_event_data_t_kernel(int_t n_total, pp_disk::event_data_t* events, var_t value)
 {
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 	if (tid < n_total)
@@ -584,25 +584,24 @@ static __global__
 								pp_disk::event_data_t *occured_event, unsigned int *event_indexer)
 {
 	int bodyIdx = threadIdx.x + blockIdx.x * blockDim.x;
-	printf("bodyIdx: %10d\n", bodyIdx);
 	
-	//if (params[bodyIdx].active && bodyIdx < n_total)
-	//{
-	//	if (pot_event[bodyIdx].event_name == EVENT_NAME_CLOSE_ENCOUNTER)
-	//	{
-	//		int2_t idx = pot_event[bodyIdx].idx;
-	//		var_t tmp = d_cst_common[THRESHOLD_COLLISION_FACTOR] * (params[idx.x].radius + params[idx.y].radius);
-	//		bool collision = pot_event[bodyIdx].d < tmp ? true : false;
-	//		if (collision)
-	//		{
-	//			unsigned int i = atomicAdd(event_indexer, 1);
-	//			printf("d/tmp = %10lf\t%d COLLISION detected. bodyIdx0: %d bodyIdx1: %d\n", pot_event[bodyIdx].d/tmp, i, bodyIdx, occured_event[i].idx.y);
+	if (params[bodyIdx].active && bodyIdx < n_total)
+	{
+		if (pot_event[bodyIdx].event_name == EVENT_NAME_CLOSE_ENCOUNTER)
+		{
+			int2_t idx = pot_event[bodyIdx].idx;
+			var_t threshold_d = d_cst_common[THRESHOLD_COLLISION_FACTOR] * (params[idx.x].radius + params[idx.y].radius);
+			bool collision = pot_event[bodyIdx].d < threshold_d ? true : false;
+			if (collision && params[idx.y].active)
+			{
+				unsigned int i = atomicAdd(event_indexer, 1);
+				printf("d/threshold_d = %10lf %5d COLLISION detected. bodyIdx_0: %5d bodyIdx_1: %5d\n", pot_event[bodyIdx].d/threshold_d, i + 1, bodyIdx, pot_event[bodyIdx].idx.y);
 
-	//			occured_event[i].event_name = EVENT_NAME_COLLISION;
-	//			occured_event[i] = pot_event[bodyIdx];
-	//		}
-	//	}
-	//}
+				occured_event[i] = pot_event[bodyIdx];
+				occured_event[i].event_name = EVENT_NAME_COLLISION;
+			}
+		}
+	}
 }
 
 static __global__
@@ -623,7 +622,7 @@ static __global__
 		if (dVec.w > SQR(d_cst_common[THRESHOLD_EJECTION_DISTANCE]))
 		{
 			unsigned int i = atomicAdd(event_indexer, 1);
-			printf("r2 = %10lf\t%d EJECTION detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
+			//printf("r2 = %10lf\t%d EJECTION detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
 
 			params[bodyIdx].active = false;
 
@@ -642,7 +641,7 @@ static __global__
 		else if (dVec.w < SQR(d_cst_common[THRESHOLD_HIT_CENTRUM_DISTANCE]))
 		{
 			unsigned int i = atomicAdd(event_indexer, 1);
-			printf("r2 = %10lf\t%d HIT_CENTRUM detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
+			//printf("r2 = %10lf\t%d HIT_CENTRUM detected. bodyIdx: %d\n", dVec.w, i, bodyIdx);
 
 			params[bodyIdx].active = false;
 
@@ -673,7 +672,7 @@ static __global__
 		ai.x = ai.y = ai.z = ai.w = 0.0;
 		for (int j = iBound.source.x; j < iBound.source.y; j++) 
 		{
-			if (j == bodyIdx || !params[bodyIdx].active) {
+			if (j == bodyIdx || !params[j].active) {
 				continue;
 			}
 	
@@ -708,6 +707,14 @@ static __global__
 		acce[bodyIdx].x = K2 * ai.x;
 		acce[bodyIdx].y = K2 * ai.y;
 		acce[bodyIdx].z = K2 * ai.z;
+	}
+
+	// Try this because the stepsize was very small: 1.0e-10
+	if (!params[bodyIdx].active)
+	{
+		acce[bodyIdx].x = 0.0;
+		acce[bodyIdx].y = 0.0;
+		acce[bodyIdx].z = 0.0;
 	}
 }
 
@@ -831,12 +838,12 @@ void calculate_migrateI_accel_kernel(interaction_bound iBound, var_t rFactor, co
 	int	bodyIdx = iBound.sink.x + tid;
 
 	var_t r = norm((vec_t*)&coor[bodyIdx]);
-	if (params[bodyIdx].migStopAt > r) {
+	if (params[bodyIdx].mig_stop_at > r) {
 		acce[tid].x = acce[tid].y = acce[tid].z = acce[tid].w = 0.0;
-		params[bodyIdx].migType = MIGRATION_TYPE_NO;
+		params[bodyIdx].mig_type = MIGRATION_TYPE_NO;
 	}
 
-	if (bodyIdx < iBound.sink.y && params[bodyIdx].migType == MIGRATION_TYPE_TYPE_I) {
+	if (bodyIdx < iBound.sink.y && params[bodyIdx].mig_type == MIGRATION_TYPE_TYPE_I) {
 		var_t a = 0.0, e = 0.0;
 		var_t mu = K2*(params[0].mass + params[bodyIdx].mass);
 		calculate_sma_ecc(mu, (vec_t*)(&coor[bodyIdx]), (vec_t*)(&velo[bodyIdx]), &a, &e);
@@ -913,8 +920,8 @@ __global__
 	printf("params[%d].epoch        : %20.15lf\n", n, params[n].epoch);
 	printf("params[%d].gamma_epstein: %20.15lf\n", n, params[n].gamma_epstein);
 	printf("params[%d].gamma_stokes : %20.15lf\n", n, params[n].gamma_stokes);
-	printf("params[%d].migType      : %20d\n", n, params[n].migType);
-	printf("params[%d].migStopAt    : %20.15lf\n", n, params[n].migStopAt);
+	printf("params[%d].mig_type     : %20d\n", n, params[n].mig_type);
+	printf("params[%d].mig_stop_at  : %20.15lf\n", n, params[n].mig_stop_at);
 }
 
 __global__
@@ -937,6 +944,11 @@ pp_disk::pp_disk(number_of_bodies *nBodies, bool has_gas, ttt_t t0) :
 	ode(2, t0),
 	nBodies(nBodies),
 	d_gasDisk(0),
+	n_par(12), /* How to make it atomatic?? */
+	n_var(sizeof(vec_t) / sizeof(var_t)),
+	h_event_indexer(0),
+	d_event_indexer(0),
+	n_event(0),
 	acceGasDrag(d_var_t()),
 	acceMigrateI(d_var_t()),
 	acceMigrateII(d_var_t())
@@ -958,12 +970,10 @@ pp_disk::~pp_disk()
 void pp_disk::allocate_vectors(bool has_gas)
 {
 	// Parameters
-	int	npar = sizeof(param_t) / sizeof(var_t);
-	h_p.resize(npar * nBodies->total);
+	h_p.resize(n_par * nBodies->total);
 
-	int ndim = sizeof(vec_t) / sizeof(var_t);
-	h_y[0].resize(ndim * nBodies->total);
-	h_y[1].resize(ndim * nBodies->total);
+	h_y[0].resize(n_var * nBodies->total);
+	h_y[1].resize(n_var * nBodies->total);
 
 	h_potential_event.resize(nBodies->total);
 	d_potential_event.resize(nBodies->total);
@@ -974,15 +984,15 @@ void pp_disk::allocate_vectors(bool has_gas)
 
 	if (has_gas) {
 		if (0 < nBodies->n_gas_drag()) {
-			acceGasDrag.resize(ndim * nBodies->n_gas_drag());
+			acceGasDrag.resize(n_var * nBodies->n_gas_drag());
 		}
 		
 		if (0 < (nBodies->rocky_planet + nBodies->proto_planet)) {
-			acceMigrateI.resize(ndim * (nBodies->rocky_planet + nBodies->proto_planet));
+			acceMigrateI.resize(n_var * (nBodies->rocky_planet + nBodies->proto_planet));
 		}
 
 		if (0 < nBodies->giant_planet) {
-			acceMigrateII.resize(ndim * nBodies->giant_planet);
+			acceMigrateII.resize(n_var * nBodies->giant_planet);
 		}
 	}
 }
@@ -991,6 +1001,19 @@ void pp_disk::clear_event_indexer()
 {
 	h_event_indexer = 0;
 	cudaMemcpy(d_event_indexer, &h_event_indexer, sizeof(h_event_indexer), cudaMemcpyHostToDevice);
+}
+
+void pp_disk::clear_param(param_t* p)
+{
+	p->active = false;
+	p->cd = 0.0;
+	p->density = 0.0;
+	p->epoch = 0.0;
+	p->gamma_epstein = 0.0;
+	p->gamma_stokes = 0.0;
+	p->mass = 0.0;
+	p->mig_stop_at = 0.0;
+	p->radius = 0.0;
 }
 
 void pp_disk::cpy_threshold_values(const var_t* h_cst_common)
@@ -1038,17 +1061,17 @@ void pp_disk::set_kernel_launch_param(int n_data)
 	block.x = n_thread;
 }
 
-void pp_disk::call_set_d_field_of_event_data_t_kernel(var_t value)
+void pp_disk::call_initialize_event_data_t_kernel(var_t value)
 {
 	int		nBodyToCalculate = nBodies->n_massive();
 
 	set_kernel_launch_param(nBodyToCalculate);
 	event_data_t* events = (event_data_t*)d_potential_event.data().get();
 
-	set_d_field_of_event_data_t_kernel<<<grid, block>>>(nBodyToCalculate, events, value);
+	initialize_event_data_t_kernel<<<grid, block>>>(nBodyToCalculate, events, value);
 	cudaError_t  cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("set_d_field_of_event_data_t_kernel failed", cudaStatus);
+		throw nbody_exception("initialize_event_data_t_kernel failed", cudaStatus);
 	}
 }
 
@@ -1302,58 +1325,101 @@ void pp_disk::handle_collision_pair(event_data_t* event_data)
 
 	get_survivor_merger_idx(event_data->id, &survivIdx, &mergerIdx);
 
+	// get device pointer aliases to coordinates and velocities
+	vec_t* coor = (vec_t*)d_y[0].data().get();
+	vec_t* velo = (vec_t*)d_y[1].data().get();
+
+	// get host and device pointer aliases to parameters
 	param_t* h_params = (param_t*)h_p.data();
 	param_t* d_params = (param_t*)d_p.data().get();
 
+	// Calculate position and velocitiy of the new object
+	vec_t r0;
+	vec_t v0;
+	calculate_phase_after_collision(h_params[event_data->idx.x].mass, h_params[event_data->idx.y].mass, &(event_data->r1), 
+		&(event_data->v1),  &(event_data->r2), &(event_data->v2), r0, v0);
+
+	// Calculate mass, volume, radius and density of the new object
 	var_t mass	 = h_params[survivIdx].mass + h_params[mergerIdx].mass;
 	var_t volume = 4.188790204786391 * (CUBE(h_params[mergerIdx].radius) + CUBE(h_params[survivIdx].radius));
 	var_t radius = pow(0.238732414637843 * volume, 1.0/3.0);
 	var_t density= mass / volume;
 
-	vec_t r0;
-	vec_t v0;
-
-	r0.x = (h_params[event_data->idx.x].mass * event_data->r1.x + h_params[event_data->idx.y].mass * event_data->r2.x) / mass;
-	r0.y = (h_params[event_data->idx.x].mass * event_data->r1.y + h_params[event_data->idx.y].mass * event_data->r2.y) / mass;
-	r0.z = (h_params[event_data->idx.x].mass * event_data->r1.z + h_params[event_data->idx.y].mass * event_data->r2.z) / mass;
-
-	v0.x = (h_params[event_data->idx.x].mass * event_data->v1.x + h_params[event_data->idx.y].mass * event_data->v2.x) / mass;
-	v0.y = (h_params[event_data->idx.x].mass * event_data->v1.y + h_params[event_data->idx.y].mass * event_data->v2.y) / mass;
-	v0.z = (h_params[event_data->idx.x].mass * event_data->v1.z + h_params[event_data->idx.y].mass * event_data->v2.z) / mass;
-
-	// Update position and velocity of survivor
-	vec_t* coor = (vec_t*)d_y[0].data().get();
-	vec_t* velo = (vec_t*)d_y[1].data().get();
-	
-	cudaMemcpy(coor + survivIdx*sizeof(vec_t), &r0, sizeof(vec_t), cudaMemcpyHostToDevice);
-	cudaError_t cudaStatus = HANDLE_ERROR(cudaGetLastError());
-	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("cudaMemcpy failed", cudaStatus);
-	}
-	cudaMemcpy(velo + survivIdx*sizeof(vec_t), &v0, sizeof(vec_t), cudaMemcpyHostToDevice);
-	cudaStatus = HANDLE_ERROR(cudaGetLastError());
-	if (cudaSuccess != cudaStatus) {
-		throw nbody_exception("cudaMemcpy failed", cudaStatus);
-	}
-
 	// Update mass, density and radius of survivor
 	h_params[survivIdx].mass	= mass;
 	h_params[survivIdx].density = density;
 	h_params[survivIdx].radius  = radius;
+	h_params[survivIdx].gamma_epstein = calculate_gamma_epstein(density, radius);
+	h_params[survivIdx].gamma_stokes  = calculate_gamma_stokes(h_params[survivIdx].cd, density, radius);
 
-	h_params[mergerIdx].active = false;
+	// Clear parameters of the merged object
+	clear_param(&h_params[mergerIdx]);
 
-	cudaMemcpy(d_params + survivIdx*sizeof(param_t), &h_params[survivIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+	// Copy the new position, velocitiy and parameters up to the device
+
+	//cout << "Position and velocity of survivor before merge:" << endl;
+	//print_coor_velo_kernel<<<1, 1>>>(survivIdx, coor, velo);
+	//cudaDeviceSynchronize();
+
+	// Copy position
+	cudaMemcpy(&coor[survivIdx], &r0, n_var * sizeof(var_t), cudaMemcpyHostToDevice);
+	cudaError_t cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
+	// Copy velocity
+	cudaMemcpy(&velo[survivIdx], &v0, n_var * sizeof(var_t), cudaMemcpyHostToDevice);
 	cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
 		throw nbody_exception("cudaMemcpy failed", cudaStatus);
 	}
-	// TODO itt romlik el!!
-	cudaMemcpy(d_params + mergerIdx*sizeof(param_t), &h_params[mergerIdx], sizeof(param_t), cudaMemcpyHostToDevice);
+
+	//cout << "Position and velocity of survivor after merge:" << endl;
+	//print_coor_velo_kernel<<<1, 1>>>(survivIdx, coor, velo);
+	//cudaDeviceSynchronize();
+
+	//cout << "Paramaters of survivor before merge:" << endl;
+	//print_param_kernel<<<1, 1>>>(survivIdx, d_params);
+	//cudaDeviceSynchronize();
+
+	// Copy parameters of the survivor
+	cudaMemcpy(&d_params[survivIdx], &h_params[survivIdx], n_par * sizeof(var_t), cudaMemcpyHostToDevice);
 	cudaStatus = HANDLE_ERROR(cudaGetLastError());
 	if (cudaSuccess != cudaStatus) {
 		throw nbody_exception("cudaMemcpy failed", cudaStatus);
 	}
+
+	//cout << "Paramaters of survivor after merge:" << endl;
+	//print_param_kernel<<<1, 1>>>(survivIdx, d_params);
+	//cudaDeviceSynchronize();
+
+	//cout << "Paramaters of merger before merge:" << endl;
+	//print_param_kernel<<<1, 1>>>(mergerIdx, d_params);
+	//cudaDeviceSynchronize();
+
+	// Copy parameters of the merger
+	cudaMemcpy(&d_params[mergerIdx], &h_params[mergerIdx], n_par * sizeof(var_t), cudaMemcpyHostToDevice);
+	cudaStatus = HANDLE_ERROR(cudaGetLastError());
+	if (cudaSuccess != cudaStatus) {
+		throw nbody_exception("cudaMemcpy failed", cudaStatus);
+	}
+
+	//cout << "Paramaters of merger after merge:" << endl;
+	//print_param_kernel<<<1, 1>>>(mergerIdx, d_params);
+	//cudaDeviceSynchronize();
+}
+
+void pp_disk::calculate_phase_after_collision(var_t m0, var_t m1, const vec_t* r1, const vec_t* v1, const vec_t* r2, const vec_t* v2, vec_t& r0, vec_t& v0)
+{
+	const var_t M = m0 + m1;
+
+	r0.x = (m0 * r1->x + m1 * r2->x) / M;
+	r0.y = (m0 * r1->y + m1 * r2->y) / M;
+	r0.z = (m0 * r1->z + m1 * r2->z) / M;
+
+	v0.x = (m0 * v1->x + m1 * v2->x) / M;
+	v0.y = (m0 * v1->y + m1 * v2->y) / M;
+	v0.z = (m0 * v1->z + m1 * v2->z) / M;
 }
 
 void pp_disk::cpy_data_to_device_after_collision()
@@ -1398,7 +1464,7 @@ void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const st
 		if (r == 0)
 		{
 			// Set the d field of the event_data_t struct to the threshold distance when collision must be looked for
-			call_set_d_field_of_event_data_t_kernel(distance_threshold);
+			call_initialize_event_data_t_kernel(distance_threshold);
 		}
 		// Make some shortcuts / aliases
 		param_t* params		 = (param_t*)p.data().get();
@@ -1409,15 +1475,6 @@ void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const st
 
 		// Calculate accelerations originated from the gravitational force
 		call_calculate_grav_accel_kernel(currt, params, coor, velo, acce, potential_event);
-
-		//h_potential_event = d_potential_event;
-		//event_data_t* alias_h_potential_event = (event_data_t*)h_potential_event.data();
-
-		//call_check_collision_kernel();
-
-		//h_occured_event = d_occured_event;
-		//event_data_t* alias_h_occured_event = (event_data_t*)h_occured_event.data();
-
 
 		if (0 != h_gasDisk && 0 < nBodies->n_gas_drag()) {
 			vec_t *aGD = (vec_t*)acceGasDrag.data().get();
@@ -1494,6 +1551,11 @@ pp_disk::h_orbelem_t pp_disk::calculate_orbelem(int_t refBodyId)
 	return h_orbelem;
 }
 
+unsigned int pp_disk::get_n_event()
+{
+	return n_event;
+}
+
 var_t pp_disk::get_mass_of_star()
 {
 	param_t* param = (param_t*)h_p.data();
@@ -1506,7 +1568,7 @@ var_t pp_disk::get_mass_of_star()
 	return 0.0;
 }
 
-var_t	pp_disk::get_total_mass()
+var_t pp_disk::get_total_mass()
 {
 	var_t totalMass = 0.0;
 
@@ -1518,7 +1580,7 @@ var_t	pp_disk::get_total_mass()
 	return totalMass;
 }
 
-void	pp_disk::compute_bc(var_t M0, vec_t* R0, vec_t* V0)
+void pp_disk::compute_bc(var_t M0, vec_t* R0, vec_t* V0)
 {
 	vec_t* coor = (vec_t*)h_y[0].data();
 	vec_t* velo = (vec_t*)h_y[1].data();
@@ -1572,7 +1634,7 @@ void pp_disk::load(string path, int n)
 	fstream input(path.c_str(), ios_base::in);
 
 	if (input) {
-		int_t	migType = 0;
+		int_t	mig_type = 0;
 		var_t	cd = 0.0;
 		ttt_t	time = 0.0;
         		
@@ -1586,9 +1648,9 @@ void pp_disk::load(string path, int n)
 			input >> cd;
 			param[i].gamma_stokes = calculate_gamma_stokes(cd, param[i].density, param[i].radius);
 			param[i].gamma_epstein = calculate_gamma_epstein(param[i].density, param[i].radius);
-			input >> migType;
-			param[i].migType = static_cast<migration_type_t>(migType);
-			input >> param[i].migStopAt;
+			input >> mig_type;
+			param[i].mig_type = static_cast<migration_type_t>(mig_type);
+			input >> param[i].mig_stop_at;
 
 			input >> coor[i].x;
 			input >> coor[i].y;
@@ -1664,9 +1726,9 @@ void pp_disk::load(string& path)
 
 			// migration type
 			input >> type;
-			param[i].migType = static_cast<migration_type_t>(type);
+			param[i].mig_type = static_cast<migration_type_t>(type);
 			// migration stop at
-			input >> param[i].migStopAt;
+			input >> param[i].mig_stop_at;
 
 			// position
 			input >> coor[i].x;
@@ -1684,211 +1746,6 @@ void pp_disk::load(string& path)
 	}
 
 	cout << "done" << endl;
-}
-
-void pp_disk::generate_rand(var2_t disk)
-{
-	int_t bodyId = 0;
-
-	param_t* params = (param_t*)h_p.data();
-	vec_t* coor = (vec_t*)h_y[0].data();
-	vec_t* velo = (vec_t*)h_y[1].data();
-
-	vec_t rVec = {0.0, 0.0, 0.0, 0.0};
-	vec_t vVec = {0.0, 0.0, 0.0, 0.0};
-	var_t cd;
-	// Output central mass
-	for (int i = 0; i < nBodies->star; i++, bodyId++)
-	{
-		params[i].id = bodyId;
-		params[i].mass = 1.0;
-		params[i].radius = Constants::SolarRadiusToAu;
-		params[i].density = calculate_density(params[i].mass, params[i].radius);
-		cd = 0.0;
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
-
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	srand ((unsigned int)time(0));
-	pp_disk::orbelem_t oe;
-	// Output giant planets
-	for (int i = 0; i < nBodies->giant_planet; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.1, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].mass = generate_random(0.1, 10.0, pdf_const) * Constants::JupiterToSolar;
-		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
-		params[i].radius = calculate_radius(params[i].mass, params[i].density);
-		cd = 0.0;
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_II;
-		params[i].migStopAt = 1.0;
-
-		var_t mu = K2*(params[0].mass + params[i].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	// Output rocky planets
-	for (int i = 0; i < nBodies->rocky_planet; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.1, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].mass = generate_random(0.1, 10.0, pdf_const) * Constants::EarthToSolar;
-		params[i].density = generate_random(3.0, 5.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
-		params[i].radius = calculate_radius(params[i].mass, params[i].density);
-		cd = 0.0;
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_I;
-		params[i].migStopAt = 0.4;
-
-		var_t mu = K2*(params[0].mass + params[i].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	// Output proto planets
-	for (int i = 0; i < nBodies->proto_planet; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.1, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].mass = generate_random(0.001, 0.1, pdf_const) * Constants::EarthToSolar;
-		params[i].density = generate_random(1.5, 3.5, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
-		params[i].radius = calculate_radius(params[i].mass, params[i].density);
-		cd = 0.0;
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_TYPE_I;
-		params[i].migStopAt = 0.4;
-
-		var_t mu = K2*(params[0].mass + params[i].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	// Output super-planetesimals
-	for (int i = 0; i < nBodies->super_planetesimal; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.2, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].mass = generate_random(0.0001, 0.01, pdf_const) * Constants::EarthToSolar;
-		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
-		params[i].radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
-		cd = generate_random(0.5, 4.0, pdf_const);
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
-
-		var_t mu = K2*(params[0].mass + params[i].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	// Output planetesimals
-	for (int i = 0; i < nBodies->planetesimal; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.2, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].density = generate_random(1.0, 2.0, pdf_const) * Constants::GramPerCm3ToSolarPerAu3;
-		params[i].radius = generate_random(5.0, 15.0, pdf_const) * Constants::KilometerToAu;
-		params[i].mass = caclulate_mass(params[i].radius, params[i].density);
-		cd = generate_random(0.5, 4.0, pdf_const);
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
-
-		var_t mu = K2*(params[0].mass + params[i].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
-
-	// Output test particles
-	for (int i = 0; i < nBodies->test_particle; i++, bodyId++)
-	{
-		oe.sma = generate_random(disk.x, disk.y, pdf_const);
-		oe.ecc = generate_random(0.0, 0.2, pdf_const);
-		oe.inc = atan(0.05); // tan(i) = h/r = 5.0e-2
-		oe.peri = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.node = generate_random(0.0, 2.0*PI, pdf_const);
-		oe.mean = generate_random(0.0, 2.0*PI, pdf_const);
-
-		params[i].id = bodyId;
-		params[i].density = 0.0;
-		params[i].radius = 0.0;
-		params[i].mass = 0.0;
-		cd = 0.0;
-		params[i].gamma_stokes = calculate_gamma_stokes(cd, params[i].density, params[i].radius);
-		params[i].gamma_epstein = calculate_gamma_epstein(params[i].density, params[i].radius);
-		params[i].migType = MIGRATION_TYPE_NO;
-		params[i].migStopAt = 0.0;
-
-		var_t mu = K2*(params[0].mass);
-		int_t ret_code = calculate_phase(mu, &oe, &rVec, &vVec);
-		if (ret_code == 1) {
-			throw nbody_exception("Cannot calculate phase.");
-		}
-		coor[i] = rVec;
-		velo[i] = vVec;
-	}
 }
 
 void pp_disk::print_event_data(ostream& sout, ostream& log_f)

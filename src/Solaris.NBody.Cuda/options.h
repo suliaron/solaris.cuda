@@ -65,11 +65,14 @@ public:
 	bool_t random;					// Generate random data
 	
 	//! holds the path of the file containing the parameters of the simulation
-	string	parameters_path;
+	string parameters_filename;
+	string parameters_path;
 	//! holds the path of the file containing the parameters of the nebula
-	string	gasDisk_path;
+	string gasdisk_filename;
+	string gasDisk_path;
 	//! holds the path of the file containing the data of the bodies
-	string	bodylist_path;
+	string bodylist_filename;
+	string bodylist_path;
 
 	//! holds a copy of the file containing the parameters of the simulation
 	string	parameters_str;

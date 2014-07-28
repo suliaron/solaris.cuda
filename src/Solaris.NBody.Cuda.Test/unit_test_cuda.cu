@@ -134,8 +134,8 @@ void	populate_ppd(pp_disk *ppd)
 	param[i].gamma_stokes = calculate_gamma_stokes(0.0, param[i].density, param[i].radius); // 0
 	param[i].gamma_epstein = calculate_gamma_epstein(param[i].density, param[i].radius); //	9.0538233626552165e-005
 
-	param[i].migType = MIGRATION_TYPE_NO;
-	param[i].migStopAt = 0.0;;
+	param[i].mig_type = MIGRATION_TYPE_NO;
+	param[i].mig_stop_at = 0.0;;
 
 	coor[i].x = coor[i].y = coor[i].z = 0.0;
 	velo[i].x = velo[i].y = velo[i].z = 0.0;
@@ -148,8 +148,8 @@ void	populate_ppd(pp_disk *ppd)
 	param[i].gamma_stokes = calculate_gamma_stokes(1.0, param[i].density, param[i].radius); // 15710.21458376437
 	param[i].gamma_epstein = calculate_gamma_epstein(param[i].density, param[i].radius); // 41893.905556705002
 
-	param[i].migType = MIGRATION_TYPE_NO;
-	param[i].migStopAt = 0.0;;
+	param[i].mig_type = MIGRATION_TYPE_NO;
+	param[i].mig_stop_at = 0.0;;
 
 	coor[i].x = 1.0;
 	coor[i].y = coor[i].z = 0.0;
@@ -182,10 +182,9 @@ cudaError_t  unit_test_pp_disk()
 		vec_t *velo = (vec_t*)ppd->d_y[1].data().get();
 		pp_disk::param_t* param = (pp_disk::param_t*)ppd->d_p.data().get();
 
-		int ndim = sizeof(vec_t) / sizeof(var_t);
 		//! Holds the derivatives for the differential equations
 		d_var_t	d_f;
-		d_f.resize(ndim * nBodies->n_gas_drag());
+		d_f.resize(n_var * nBodies->n_gas_drag());
 		vec_t *aGD = (vec_t*)d_f.data().get();
 
 		// Calculate accelerations originated from gas drag

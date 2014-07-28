@@ -118,9 +118,9 @@ public:
 		//! Used for the drag force
 		var_t gamma_epstein;
 		//! Type of the migration
-		migration_type_t migType;
+		migration_type_t mig_type;
 		//! The migration stop at this distance measured from the star
-		var_t	migStopAt;
+		var_t mig_stop_at;
 	} param_t;
 
 	typedef struct event_data
@@ -152,10 +152,8 @@ public:
 		var_t mean;
 	} orbelem_t;
 
-	vector<string>								body_names;
-
-	typedef thrust::host_vector<param_t>		h_param_t;
-	typedef thrust::device_vector<param_t>		d_param_t;
+	//typedef thrust::host_vector<param_t>		h_param_t;
+	//typedef thrust::device_vector<param_t>		d_param_t;
 
 	typedef thrust::host_vector<orbelem_t>		h_orbelem_t;
 	typedef thrust::device_vector<orbelem_t>	d_orbelem_t;
@@ -163,9 +161,14 @@ public:
 	typedef thrust::host_vector<event_data_t>	h_event_data_t;
 	typedef thrust::device_vector<event_data_t>	d_event_data_t;
 
-	unsigned int								h_event_indexer;
-	unsigned int								*d_event_indexer;
-	unsigned int								n_event;
+	vector<string>		body_names;
+
+	int					n_par;					//!< The number of parameters in the param_t type
+	int					n_var;					//!< The number of variables in the vec_t type
+
+	unsigned int		h_event_indexer;
+	unsigned int		*d_event_indexer;
+	unsigned int		n_event;
 
 	d_orbelem_t			d_orbelem;
 	h_orbelem_t			h_orbelem;
@@ -196,6 +199,7 @@ public:
 		\param path the full path of the data file
 	*/
 	void load(string& path);
+
 	void generate_rand(var2_t disk);
 	//! Print all bodies' id, mass, radius, density, position and velocity vector
 	int print_positions(ostream& sout);
@@ -203,8 +207,11 @@ public:
 	void cpy_threshold_values(const var_t *h_cst_common);
 
 	void transform_to_bc();
+	//! Return the number of the occured event
+	unsigned int get_n_event();
+
 	//! Computes the total mass of the system
-	var_t	get_total_mass();
+	var_t get_total_mass();
 	//! Returns the mass of the central star (the id of the star must be 0!)
 	var_t get_mass_of_star();
 	//! Compute the position and velocity of the system's barycenter
@@ -213,7 +220,7 @@ public:
 		\param R0 will contain the position of the barycenter
 		\param V0 will contain the velocity of the barycenter
 	*/
-	void	compute_bc(var_t M0, vec_t* R0, vec_t* V0);
+	void compute_bc(var_t M0, vec_t* R0, vec_t* V0);
 
 	//! Calls the cpu function that calculates the accelerations from gravitational
 	/*  interactions.
@@ -227,6 +234,11 @@ public:
 	void call_check_hit_centrum_ejection_kernel();
 	//! Checks whether any collisions have occured
 	void call_check_collision_kernel();
+	//! Set the d field of the event_data_t to value
+	/*
+		\param value The the d field will be set to this value
+	*/
+	void call_initialize_event_data_t_kernel(var_t value);
 
 	void print_event_data(ostream& sout, ostream& log);
 	void handle_hit_centrum_ejection();
@@ -248,15 +260,13 @@ private:
 
 	void allocate_vectors(bool has_gas);
 	void clear_event_indexer();
+	void clear_param(param_t* p);
+
+	void calculate_phase_after_collision(var_t m0, var_t m1, const vec_t* r1, const vec_t* v1, const vec_t* r2, const vec_t* v2, vec_t& r0, vec_t& v0);
 
 	//! Sets the grid and block for the kernel launch
 	void set_kernel_launch_param(int n_data);
 
-	//! Set the d field of the event_data_t to value
-	/*
-		\param value The the d field will be set to this value
-	*/
-	void call_set_d_field_of_event_data_t_kernel(var_t value);
 
 
 	//! Calls the kernel that calculates the accelerations from gravitational
