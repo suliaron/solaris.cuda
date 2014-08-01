@@ -67,13 +67,15 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 	// d_f: intermediate differentials (f)
 
 	var_t max_err;
-	ttt_t dttemp;
 
-	int_t iter = 0;
+	int iter = 0;
 	do
 	{
 		ttt_t ttemp;
 		int rr = 0;
+
+		// Save current step length
+		dt_did = dt;
 
 		// Calculate the acelleration matrix first
 		for (int r = 0; r < RKOrder; r++)
@@ -113,9 +115,6 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 			}
 		}
 
-		// Save current step length
-		dttemp = dt;
-
 		if (adaptive)
 		{
 			absdiff_vec(d_err, d_f[RKOrder - 2], d_f[RKOrder - 1], (var_t)(dt * dt) * err);
@@ -128,8 +127,10 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 		}
 		iter++;
 	} while (adaptive && max_err > tolerance);
-	n_failed_step += (iter - 1);
-	n_step++;
+	if (adaptive)
+	{
+		update_counters(iter);
+	}
 
 	// Time step is now accurate enough
 	// Propagate variables
@@ -137,7 +138,7 @@ ttt_t rungekuttanystrom<RKOrder>::step()
 	copy_vec(f.d_yout[1], d_dytemp);
 
 	// Step time
-	f.tout = f.t + dttemp;
+	f.tout = f.t + dt_did;
 
 	f.swap_in_out();
 

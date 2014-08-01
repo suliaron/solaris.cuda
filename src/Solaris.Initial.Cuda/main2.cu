@@ -1,6 +1,8 @@
 // includes, system 
+#include <algorithm>
 #include <cmath>
 #include <ctime>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -36,6 +38,8 @@
 // the case of a division i.e. 1/SQR(x) -> 1/((x)*(x))
 #define	SQR(x)			((x)*(x))
 #define	CUBE(x)			((x)*(x)*(x))
+
+typedef double ioT;
 
 using namespace std;
 
@@ -118,6 +122,10 @@ var_t calculate_radius(var_t m, var_t density)
 
 var_t calculate_density(var_t m, var_t R)
 {
+	if (R == 0.0)
+	{
+		return 0.0;
+	}
 	return m / (FOUR_PI_OVER_THREE * CUBE(R));
 }
 
@@ -192,8 +200,7 @@ int_t	calculate_phase(var_t mu, const pp_disk::orbelem_t* oe, vec_t* rVec, vec_t
 	return 0;
 }
 
-
-void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::param_t *param, vec_t *r, vec_t *v, output_version_t o_version)
+void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::param_t *param, vec_t *r, vec_t *v, int precision, output_version_t o_version)
 {
 	static char sep = ' ';
 
@@ -210,18 +217,131 @@ void print_body_record(ofstream &output, string name, var_t epoch, pp_disk::para
 		output << endl;
 		break;
 	case OUTPUT_VERSION_SECOND:
-		output << param->id << sep
-			   << name << sep 
-			   << param->body_type << sep 
-			   << param->epoch << sep;
-		output << param->mass << sep << param->radius << sep << param->density << sep << param->cd << sep;
-		output << param->mig_type << sep << param->mig_stop_at << sep;
-		output << r->x << sep << r->y << sep << r->z << sep;
-		output << v->x << sep << v->y << sep << v->z << sep;
+		output << setw(6) << param->id << sep
+			   << setw(16) << name << sep 
+			   << setw(3) << param->body_type << sep 
+			   << setw(20) << param->epoch << sep;
+		output << setw(precision + 6) << setprecision(precision) << param->mass << sep 
+			   << setw(precision + 6) << param->radius << sep 
+			   << setw(precision + 6) << param->density << sep 
+			   << setw(precision + 6) << param->cd << sep;
+		output << setw(3) << param->mig_type << sep
+			   << setw(precision + 6) << param->mig_stop_at << sep;
+		output << setw(precision + 6) << r->x << sep 
+			   << setw(precision + 6) << r->y << sep
+			   << setw(precision + 6) << r->z << sep;
+		output << setw(precision + 6) << v->x << sep
+			   << setw(precision + 6) << v->y << sep
+			   << setw(precision + 6) << v->z << sep;
 		output << endl;
 		break;
 	default:
 		cerr << "Invalid output version!" << endl;
+		exit(1);
+	}
+}
+
+void Emese_data_format_to_solaris_cuda_format(const string& input_path, const string& output_path)
+{
+	ifstream input(input_path, ios::in | ios::binary);
+	ofstream output(output_path, ios_base::out);
+
+	if (!input)
+	{
+		cerr << "Cannot open " << input_path << "." << endl;
+	}
+	if (!output)
+	{
+		cerr << "Cannot open " << output_path << "." << endl;
+	}
+
+	output << "1 0 0 5000 0 0 5000" << endl;
+	if (input && output) 
+	{
+		ioT time = 0;        
+		int64_t nbodyfilein;
+		int64_t lengthChar;      
+		char buffer[64];
+		ioT id = 0;
+		string name;
+		string reference;
+		ioT x = 0;
+		ioT y = 0;
+		ioT z = 0;
+		ioT vx = 0;
+		ioT vy = 0;
+		ioT vz = 0;
+		ioT m = 0;
+		ioT rad = 0;
+
+		input.read(reinterpret_cast<char *>(&time), sizeof(time));
+		input.read(reinterpret_cast<char *>(&nbodyfilein), sizeof(nbodyfilein));
+		for (int i = 0; i < nbodyfilein; i++)
+		{
+			input.read(reinterpret_cast<char *>(&id), sizeof(id));
+
+			lengthChar = 0;
+			input.read(reinterpret_cast<char *>(&lengthChar), sizeof(lengthChar));            
+			input.read(buffer, lengthChar);
+			buffer[lengthChar] = 0;
+			name = buffer;
+			replace(name.begin(), name.end(), ' ', '_'); // replace all ' ' to '_'
+
+			lengthChar = 0;
+			input.read(reinterpret_cast<char *>(&lengthChar), sizeof(lengthChar));
+			input.read(buffer, lengthChar);
+			buffer[lengthChar] = 0;
+			reference = buffer; 
+
+			input.read(reinterpret_cast<char *>(& x), sizeof( x));
+			input.read(reinterpret_cast<char *>(& y), sizeof( y));
+			input.read(reinterpret_cast<char *>(& z), sizeof( z));
+			input.read(reinterpret_cast<char *>(&vx), sizeof(vx));
+			input.read(reinterpret_cast<char *>(&vy), sizeof(vy));
+			input.read(reinterpret_cast<char *>(&vz), sizeof(vz));
+			input.read(reinterpret_cast<char *>(& m), sizeof( m));
+			input.read(reinterpret_cast<char *>(& rad), sizeof( rad));
+
+			var_t	t = time;
+			vec_t	rVec = {x, y, z, 0.0};
+			vec_t	vVec = {vx, vy, vz, 0.0};
+
+			pp_disk::param_t	param;
+			pp_disk::orbelem_t	oe;
+
+			param.active = true;
+			param.id = id;
+			if (id == 0)
+			{
+				param.body_type = BODY_TYPE_STAR;
+			}
+			if (id)
+			{
+				if (m > 0.0)
+				{
+					param.body_type = BODY_TYPE_PROTOPLANET;
+				}
+				else
+				{
+					param.body_type = BODY_TYPE_TESTPARTICLE;
+				}
+			}
+			param.epoch = time;
+
+			param.cd = 0.0;
+			param.mass = m;
+			param.radius = rad;
+			param.density = calculate_density(m, rad);
+			param.mig_stop_at = 0.0;
+			param.mig_type = MIGRATION_TYPE_NO;
+
+			print_body_record(output, name, time, &param, &rVec, &vVec, 15, OUTPUT_VERSION_SECOND);
+		}
+		input.close();
+		output.close();
+	}
+	else
+	{
 		exit(1);
 	}
 }
@@ -322,6 +442,7 @@ void generate_pp(phys_prop_dist_t pp_d, pp_disk::param_t& param)
 int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_version)
 {
 	static char sep = ' ';
+	static const int precision = 10;
 
 	ofstream	output(path, ios_base::out);
 	if (output)
@@ -355,7 +476,7 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 					generate_pp(body_disk.pp_d[body_type], param0);
 					param0.mig_type = body_disk.mig_type[bodyId];
 					param0.mig_stop_at = body_disk.stop_at[bodyId];
-					print_body_record(output, body_disk.names[bodyId], t, &param0, &rVec, &vVec, o_version);
+					print_body_record(output, body_disk.names[bodyId], t, &param0, &rVec, &vVec, precision, OUTPUT_VERSION_SECOND);
 				} /* if */
 				else 
 				{
@@ -375,7 +496,7 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 						return ret_code;
 					}
 
-					print_body_record(output, body_disk.names[bodyId], t, &param, &rVec, &vVec, o_version);
+					print_body_record(output, body_disk.names[bodyId], t, &param, &rVec, &vVec, precision, o_version);
 				} /* else */
 			} /* for */
 		} /* for */
@@ -390,31 +511,6 @@ int generate_pp_disk(string &path, body_disk_t& body_disk, output_version_t o_ve
 
 	return 0;
 }
-
-void load_binary(string& in_path, string& out_path)
-{
-	cout << "Loading " << in_path << " ... ";
-
-	ifstream input (in_path, ios::in|ios::binary);
-	ofstream output(out_path, ios_base::out);
-
-	if (input) {
-
-	}
-	else {
-		cerr << "Cannot open " << in_path << "." << endl;
-	}
-
-	if (input) {
-
-	}
-	else {
-		cerr << "Cannot open " << out_path << "." << endl;
-	}
-
-	cout << "done" << endl;
-}
-
 
 void set_parameters_of_Dvorak_disk(body_disk_t& disk)
 {
@@ -512,19 +608,28 @@ int parse_options(int argc, const char **argv, number_of_bodies **nBodies, strin
 }
 
 //-o D:\Work\Projects\solaris.cuda\TestRun\Dvorak_disk -f Dvorak_disk.txt
+// 
+//-o C:\Work\Projects\solaris.cuda\TestRun\Dvorak_disk_Emese -f collision-testdata-N10001-vecelem-binary.dat
 int main(int argc, const char **argv)
 {
 	body_disk_t disk;
 	string outDir;
 	string filename;
-	string path;
+	string output_path;
 
 	parse_options(argc, argv, 0, outDir, filename);
 
 	{
+		string input_path = combine_path(outDir, filename);
+		string output_path = combine_path(outDir, get_filename_without_ext(filename) + ".txt");
+		Emese_data_format_to_solaris_cuda_format(input_path, output_path);
+		return 0;
+	}
+
+	{
 		set_parameters_of_Dvorak_disk(disk);
-		path = combine_path(outDir, filename);
-		generate_pp_disk(path, disk, OUTPUT_VERSION_SECOND);
+		output_path = combine_path(outDir, filename);
+		generate_pp_disk(output_path, disk, OUTPUT_VERSION_SECOND);
 	}
 
 	return 0;

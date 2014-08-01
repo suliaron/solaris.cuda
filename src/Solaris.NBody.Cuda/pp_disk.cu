@@ -595,7 +595,7 @@ static __global__
 			if (collision && params[idx.y].active)
 			{
 				unsigned int i = atomicAdd(event_indexer, 1);
-				printf("d/threshold_d = %10lf %5d COLLISION detected. bodyIdx_0: %5d bodyIdx_1: %5d\n", pot_event[bodyIdx].d/threshold_d, i + 1, bodyIdx, pot_event[bodyIdx].idx.y);
+				//printf("d/threshold_d = %10lf %5d COLLISION detected. bodyIdx_0: %5d bodyIdx_1: %5d\n", pot_event[bodyIdx].d/threshold_d, i + 1, bodyIdx, pot_event[bodyIdx].idx.y);
 
 				occured_event[i] = pot_event[bodyIdx];
 				occured_event[i].event_name = EVENT_NAME_COLLISION;
@@ -675,12 +675,15 @@ static __global__
 			if (j == bodyIdx || !params[j].active) {
 				continue;
 			}
-	
+			// 3 FLOP
 			dVec.x = coor[j].x - ci.x;
 			dVec.y = coor[j].y - ci.y;
 			dVec.z = coor[j].z - ci.z;
 
+			// 5 FLOP
 			dVec.w = SQR(dVec.x) + SQR(dVec.y) + SQR(dVec.z);	// = r2
+			// TODO: use rsqrt()
+			// 20 FLOP
 			var_t r = sqrt(dVec.w);								// = r
 
 			if (bodyIdx > 0 && bodyIdx < j && r < events[bodyIdx].d)
@@ -697,13 +700,15 @@ static __global__
 				events[bodyIdx].r2 = coor[j];
 				events[bodyIdx].v2 = velo[j];
 			}
-
+			// 2 FLOP
 			dVec.w = params[j].mass / (r*dVec.w);
 
+			// 6 FLOP
 			ai.x += dVec.w * dVec.x;
 			ai.y += dVec.w * dVec.y;
 			ai.z += dVec.w * dVec.z;
 		}
+		// 36 FLOP
 		acce[bodyIdx].x = K2 * ai.x;
 		acce[bodyIdx].y = K2 * ai.y;
 		acce[bodyIdx].z = K2 * ai.z;
@@ -1439,8 +1444,6 @@ void pp_disk::handle_collision()
 
 void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const std::vector<d_var_t>& y, d_var_t& dy)
 {
-	static var_t distance_threshold = 0.5; // AU
-
 	cudaError_t cudaStatus = cudaSuccess;
 
 	switch (i)
@@ -1461,17 +1464,21 @@ void pp_disk::calculate_dy(int i, int r, ttt_t currt, const d_var_t& p, const st
 		}
 		break;
 	case 1:
-		if (r == 0)
-		{
-			// Set the d field of the event_data_t struct to the threshold distance when collision must be looked for
-			call_initialize_event_data_t_kernel(distance_threshold);
-		}
 		// Make some shortcuts / aliases
 		param_t* params		 = (param_t*)p.data().get();
+		param_t* h_params	 = (param_t*)h_p.data();
 		event_data_t* potential_event = (event_data_t*)d_potential_event.data().get();
 		vec_t* coor			 = (vec_t*)y[0].data().get();
 		vec_t* velo			 = (vec_t*)y[1].data().get();
 		vec_t* acce			 = (vec_t*)dy.data().get();
+
+		if (r == 0)
+		{
+			// Set the d field of the event_data_t struct to the threshold distance when collision must be looked for
+			// This is set to the radius of the star enhanced by 1 %.
+			var_t threshold_distance_for_close_encounter = 1.01 * h_params[0].radius;
+			call_initialize_event_data_t_kernel(threshold_distance_for_close_encounter);
+		}
 
 		// Calculate accelerations originated from the gravitational force
 		call_calculate_grav_accel_kernel(currt, params, coor, velo, acce, potential_event);
@@ -1754,34 +1761,33 @@ void pp_disk::print_event_data(ostream& sout, ostream& log_f)
 	static char *e_names[] = {"NONE", "HIT_CENTRUM", "EJECTION", "CLOSE_ENCOUNTER", "COLLISION"};
 
 	thrust::copy(d_occured_event.begin(), d_occured_event.begin() + n_event, h_occured_event.begin());
-	//h_occured_event = d_occured_event;
 	event_data_t* occured_event = (event_data_t*)h_occured_event.data();
 
-	param_t* params		 = (param_t*)h_p.data();
+	param_t* params	= (param_t*)h_p.data();
 	for (int i = 0; i < n_event; i++)
 	{
-		sout << occured_event[i].t << sep
-			 << e_names[occured_event[i].event_name] << sep
-			 << occured_event[i].id.x << sep
-			 << occured_event[i].id.y << sep
-			 << params[occured_event[i].idx.x].mass << sep
-			 << params[occured_event[i].idx.x].density << sep
-			 << params[occured_event[i].idx.x].radius << sep
-			 << occured_event[i].r1.x << sep
-			 << occured_event[i].r1.y << sep
-			 << occured_event[i].r1.z << sep
-			 << occured_event[i].v1.x << sep
-			 << occured_event[i].v1.y << sep
-			 << occured_event[i].v1.z << sep
-			 << params[occured_event[i].idx.y].mass << sep
-			 << params[occured_event[i].idx.y].density << sep
-			 << params[occured_event[i].idx.y].radius << sep
-			 << occured_event[i].r2.x << sep
-			 << occured_event[i].r2.y << sep
-			 << occured_event[i].r2.z << sep
-			 << occured_event[i].v2.x << sep
-			 << occured_event[i].v2.y << sep
-			 << occured_event[i].v2.z << sep << endl;
+		sout << setw(20) << setprecision(10) << occured_event[i].t << sep
+			 << setw(16) << e_names[occured_event[i].event_name] << sep
+			 << setw( 8) << occured_event[i].id.x << sep
+			 << setw( 8) << occured_event[i].id.y << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.x].mass << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.x].density << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.x].radius << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r1.x << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r1.y << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r1.z << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v1.x << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v1.y << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v1.z << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.y].mass << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.y].density << sep
+			 << setw(20) << setprecision(10) << params[occured_event[i].idx.y].radius << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r2.x << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r2.y << sep
+			 << setw(20) << setprecision(10) << occured_event[i].r2.z << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v2.x << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v2.y << sep
+			 << setw(20) << setprecision(10) << occured_event[i].v2.z << sep << endl;
 
 		char time_stamp[20];
 		get_time_stamp(time_stamp);

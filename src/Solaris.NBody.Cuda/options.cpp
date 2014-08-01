@@ -741,9 +741,6 @@ pp_disk*	options::create_pp_disk()
 	ppd->t = start_time;
 	ppd->transform_to_bc();
 	ppd->copy_to_device();
-	// TODO: calculate automatically the threshold_distance_for_close_encounter
-	const var_t threshold_distance_for_close_encounter = 0.1; // AU
-	ppd->call_initialize_event_data_t_kernel(threshold_distance_for_close_encounter);
 
 	return ppd;
 }

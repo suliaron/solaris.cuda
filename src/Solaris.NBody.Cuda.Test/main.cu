@@ -263,26 +263,45 @@ int device_query(int argc, const char **argv)
     return (EXIT_SUCCESS);
 }
 
-void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, ostream& log_f)
+void print_step_stat(pp_disk *ppd, options *opt, integrator* intgr, ttt_t dt_try, ostream& log_f)
 {
 	char time_stamp[20];
 	get_time_stamp(time_stamp);
 
+	int n_failed_step = intgr->get_n_failed_step();
+	int n_passed_step = intgr->get_n_passed_step();
+	int n_tried_step  = intgr->get_n_tried_step();
+
 	ttt_t t = ppd->get_currt();
-	ttt_t avg_dt = (t - opt->start_time)/(var_t)intgr->get_n_step();
+	ttt_t avg_dt = (t - opt->start_time)/(var_t)n_passed_step;
+
 	log_f << time_stamp << ' ';
-	log_f << intgr->get_n_failed_step() << " step(s) failed out of " << intgr->get_n_step() << " steps until " << t << " [day] average dt: " << setprecision(10) << setw(16) << avg_dt << " [d]\t";
+	log_f << "n_tried_step: " << n_tried_step << ", n_failed_step: " << n_failed_step << ", n_passed_step: " << n_passed_step << " until " << t << " [day]. dt_try: " << setprecision(8) << setw(14) << dt_try << " [d], avg_dt: " << avg_dt << " [d]\t";
 	log_f << setprecision(5) << setw(6) << (t/opt->stop_time)*100.0 << " % done" << endl;
 
 	log_f.flush();
 }
 
+void print_msg(string& msg, ostream& log_f)
+{
+	char time_stamp[20];
+	get_time_stamp(time_stamp);
+
+	log_f << time_stamp << ' ' << msg << endl;
+	log_f.flush();
+}
+
+// --verbose -o C:\Work\Projects\solaris.cuda\TestRun\Dvorak -ip parameters.txt -ibl Dvorak_disk.txt
+// --verbose -o C:\Work\Projects\solaris.cuda\TestRun\Stepsize\100_Stored_dt_ver0 -ip parameters.txt -ibl Dvorak_disk.txt
+// --verbose -o C:\Work\Projects\solaris.cuda\TestRun\Dvorak_disk_Emese\Factor_5 -ip parameters.txt -ibl collision-testdata-N10001-vecelem-binary.txt
 int main(int argc, const char** argv)
 {
 	cout << "Solaris.NBody.Cuda.Test main.cu started" << endl;
 	device_query(argc, argv);
 
 	time_t start = time(NULL);
+	var_t sum_time_of_steps = 0.0;
+	int_t n_step = 0;
 
 	// Integrate the pp_disk ode
 	try {
@@ -319,29 +338,30 @@ int main(int argc, const char** argv)
 				ppd->handle_collision();
 			}
 
+			clock_t start_of_step = clock();
+			dt = intgr->step();
+			n_step++;
+			clock_t end_of_step = clock();
+			sum_time_of_steps += (end_of_step - start_of_step);
+
+			cout << "Time for one step: " << (end_of_step - start_of_step) / (double)CLOCKS_PER_SEC << " s, avg: " << sum_time_of_steps / (double)CLOCKS_PER_SEC / n_step << " s" << endl;
+
+			ps += fabs(dt);
+			currt = ppd->get_currt();
+
 			if (fabs(ps) >= opt.output_interval)
 			{
 				ps = 0.0;
 				ppd->copy_to_host();
 				ppd->print_positions(*pos_f);
-				if (opt.verbose && currt != opt.start_time)
-				{
-					print_step_stat(ppd, &opt, intgr, *log_f);
-					cout << "t: " << setw(15) << currt << ", dt: " << setw(15) << dt << " [d]" << endl;
-				}
 			}
-			dt = intgr->step();
-			ps += fabs(dt);
-			currt = ppd->get_currt();
-
+			if (opt.verbose && (intgr->get_n_passed_step()) % 100 == 0)
+			{
+				print_step_stat(ppd, &opt, intgr, dt, *log_f);
+			}
 		}
 		// Save final conditions to the output file
 		ppd->print_positions(*pos_f);
-		if (opt.verbose)
-		{
-			print_step_stat(ppd, &opt, intgr, *log_f);
-			cout << "t: " << setw(15) << currt << ", dt: " << setw(15) << dt << " [d]" << endl;
-		}
 	} /* try */
 	catch (nbody_exception& ex)
 	{

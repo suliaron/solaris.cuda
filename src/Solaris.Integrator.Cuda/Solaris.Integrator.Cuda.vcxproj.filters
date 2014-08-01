@@ -30,9 +30,6 @@
     <ClInclude Include="integrator_exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\config\config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="midpoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>

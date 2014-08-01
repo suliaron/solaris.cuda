@@ -165,7 +165,7 @@ ttt_t rk4::step()
 
 	dt_try = dt;
 	var_t max_err = 0.0;
-	int_t iter = 0;
+	int iter = 0;
 	do {
 		dt_did = dt_try;
 		// Calculate f2 = f(tn + c2 * dt, yn + a21 * dt * f1) = d_f[][1]
@@ -197,8 +197,10 @@ ttt_t rk4::step()
 		}
 		iter++;
 	} while (adaptive && max_err > tolerance);
-	n_failed_step += (iter - 1);
-	n_step++;
+	if (adaptive)
+	{
+		update_counters(iter);
+	}
 	// Set the next step size
 	dt = dt_try;
 

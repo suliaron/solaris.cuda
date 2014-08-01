@@ -105,6 +105,7 @@ ttt_t	midpoint::step()
 
 	int r = 0;
 
+	dt_did = dt;
 	// Calculate k1 = f(tn, yn) = d_f[][0]
 	ttt_t ttemp = f.t + c[r] * dt;
 	for (int i = 0; i < forder; i++) {
@@ -118,10 +119,9 @@ ttt_t	midpoint::step()
 	for (int i = 0; i < forder; i++) {
 		f.calculate_dy(i, r, ttemp, f.d_p, d_ytemp, d_f[i][r]); 
 	}
-	calc_y_np1();
+	update_counters(1);
 
-	n_failed_step += 0;
-	n_step++;
+	calc_y_np1();
 
 	f.tout = f.t + dt;
 	f.swap_in_out();

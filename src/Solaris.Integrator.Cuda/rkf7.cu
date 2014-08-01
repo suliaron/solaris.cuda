@@ -467,6 +467,7 @@ void rkf7::calculate_grid(int nData, int threads_per_block)
 #define PGROW	-0.2
 #define PSHRNK	-0.25
 #define ERRCON	 1.89e-4
+
 ttt_t rkf7::step()
 {
 	int	forder = f.get_order();
@@ -480,7 +481,7 @@ ttt_t rkf7::step()
 
 	dt_try = dt;
 	var_t max_err = 0.0;
-	int_t iter = 0;
+	int iter = 0;
 	do {
 		dt_did = dt_try;
 		// Calculate f1 = f(tn + c1 * dt, yn + a10 * dt * f0) = d_f[][1]
@@ -531,8 +532,14 @@ ttt_t rkf7::step()
 		}
 		iter++;
 	} while (adaptive && max_err > 1.0);
-	n_failed_step += (iter - 1);
-	n_step++;
+	if (adaptive)
+	{
+		update_counters(iter);
+		//if (has_data)
+		//{
+		//	calculate_dt_try();
+		//}
+	}
 	// Set the next step size
 	dt = dt_try;
 
@@ -541,6 +548,7 @@ ttt_t rkf7::step()
 
 	return dt_did;
 }
+
 #undef SAFETY
 #undef PGROW
 #undef PSHRNK

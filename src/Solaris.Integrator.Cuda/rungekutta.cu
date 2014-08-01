@@ -47,6 +47,7 @@ ttt_t rungekutta<RKOrder>::step()
 	int rr = 0;
 	ttt_t ttemp;
 
+	dt_did = dt;
 	for (int r = 0; r < RKOrder; r++) {
 		ttemp = f.t + rungekutta::c[r] * dt;
 
@@ -77,8 +78,7 @@ ttt_t rungekutta<RKOrder>::step()
 			sum_vec(f.d_yout[i], f.d_yout[i], d_f[i][r], (var_t)(b[r] * dt));
 		}
 	}
-	n_failed_step += 0;
-	n_step++;
+	update_counters(1);
 
 	// Advance time
 	f.tout = f.t + dt;

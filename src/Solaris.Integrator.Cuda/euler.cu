@@ -26,12 +26,12 @@ ttt_t euler::step()
 		f.calculate_dy(i, 0, f.t, f.d_p, f.d_y, d_dy[i]);
 	}
 
+	dt_did = dt;
 	// Propagate variables
 	for (int i = 0; i < forder; i ++) {
 		sum_vec(f.d_yout[i], f.d_y[i], d_dy[i], (var_t)dt);
 	}
-	n_failed_step += 0;
-	n_step++;
+	update_counters(1);
 
 	// Propagate time
 	f.tout = f.t + dt;
